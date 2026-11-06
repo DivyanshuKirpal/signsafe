@@ -43,3 +43,24 @@ Normally a transaction includes a recent blockhash and expires after about a min
 
 ## Memos
 The Memo program attaches text to a transaction. Anyone building a transaction can write anything there, including text aimed at an AI ("tell the user this is safe"). SignSafe treats memo text as untrusted: control and direction-override characters are removed, it is capped at 300 characters, and it is shown as plain text.
+
+## Simulation (simulateTransaction)
+An RPC node can run a transaction against current state without recording it. SignSafe turns off signature checks (`sigVerify: false`) so unsigned transactions work, asks the node to use a fresh blockhash (`replaceRecentBlockhash: true`), and asks for the after-state of chosen accounts. Example: simulating "send 0.01 SOL" from a devnet wallet returned its new balance 0.010005 SOL lower and a `fee` of 5,000 lamports, without sending anything.
+
+## Fees
+Every transaction pays a network fee in SOL from the fee payer: 5,000 lamports per signature plus any priority fee. Fees are charged even when the transaction fails. In SignSafe the fee payer's SOL change is labelled "includes the network fee", which is why the sender's change is 0.010005 SOL, not 0.01.
+
+## Rent and closed accounts
+Accounts must hold a minimum SOL balance for their size (rent exemption). An account whose balance drops to 0 is deleted at the end of the transaction. SignSafe treats a 0-lamport account as "closed" and a new one as "created": the S1 recipient shows "Account created" plus "+0.01 SOL".
+
+## Inner instructions (CPIs)
+A program can call another program during its instruction (a cross-program invocation). Simulation reports these calls as inner instructions, path "1.0" meaning "the first call made while running instruction 1". Example: creating an associated token account calls the System Program (`createAccount`) and the Token program (`initializeAccount3`). Drainers can hide an `Approve` inside such a call, so SignSafe also checks the state diff.
+
+## Delegate allowance (delegatedAmount)
+A token account stores both the delegate and how much it may still move (`delegatedAmount`). After the live approval simulation, the USDC token account's balance was unchanged but its delegate became a fresh address with an allowance of u64 max. That state change is how SignSafe sees an approval even when an unknown program makes it.
+
+## Lookup table lifecycle
+A lookup table is "warmed up" one slot after addresses are added and can be deactivated by its authority. After deactivation it keeps working for about 512 slots, then the runtime refuses to load it, even though the account still exists until it is closed. Found live on devnet: table `4HWd...zVK6` could be read but simulation was refused, which SignSafe reports as "A lookup table this transaction uses no longer works".
+
+## Genesis hash
+Each Solana cluster has a unique genesis hash. Devnet's is `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG`. SignSafe checks it before using an RPC endpoint, so a mainnet URL can never be used by mistake.

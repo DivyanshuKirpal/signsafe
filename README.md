@@ -17,7 +17,8 @@ Fixed, unit-tested rules decide the risk level. The AI model only explains the r
 ### What works so far
 
 - **Decoding:** paste a base64 transaction (signed or unsigned; legacy, v0 or v1). SignSafe lists the fee payer, signers, compute budget, durable-nonce use and every instruction with a plain-English sentence, for example "Send 0.01 SOL from 9xQe...VFin to 4Nd1...DB4T." or "Allow HN7c...YWrH to spend UNLIMITED (u64 max) from token account 2wmV...dri9." Known programs (System, SPL Token, Token-2022, Associated Token Account, Compute Budget, Memo, Address Lookup Table) are decoded with the official program clients; anything else is labelled "Unknown program". Memo text is treated as untrusted.
-- Simulation, risk rules, the verdict and the AI explanation are being built.
+- **Simulation on devnet:** the transaction is simulated with `simulateTransaction` (nothing is signed or sent), and the before/after state of the fee payer, signers, written accounts and related token mints is compared: SOL balances (the network fee is identified), token balances, delegate and allowance, token-account owner, close authority, owning program, and created or closed accounts. An approval shows up as a delegate change even though no tokens move. Calls between programs (inner instructions) and program logs are listed. Lookup tables are loaded over RPC. Anything that could not be checked (unloaded tables, a failed simulation, accounts left out of the comparison) is listed separately.
+- Risk rules, the verdict and the AI explanation are being built.
 
 ## Setup
 
@@ -42,6 +43,7 @@ npm run dev                      # http://localhost:3000
 | `npm run scenarios:check` | (planned) runs every demo scenario and compares verdicts |
 | `npm run fixtures:save` | (planned) saves scenario results for offline replay |
 | `npm run samples:print` | prints two example transactions (a normal payment and an unlimited token approval) to paste into the app |
+| `npm run live:check` | runs the decode + simulate pipeline against devnet with existing public devnet accounts and checks the results (`-- --record` saves the RPC traffic as test fixtures) |
 
 ## Security notes
 

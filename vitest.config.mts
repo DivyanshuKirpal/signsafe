@@ -1,4 +1,8 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+
+// Same "@/" alias as tsconfig.json paths.
+const alias = { "@": fileURLToPath(new URL(".", import.meta.url)) };
 
 // Two test projects:
 // - "unit": pure TypeScript (decoder, rules, scripts) in plain Node. Most tests live here.
@@ -8,6 +12,7 @@ export default defineConfig({
     testTimeout: 30_000,
     projects: [
       {
+        resolve: { alias },
         test: {
           name: "unit",
           environment: "node",
@@ -16,6 +21,7 @@ export default defineConfig({
       },
       {
         resolve: {
+          alias,
           conditions: ["browser"],
         },
         test: {

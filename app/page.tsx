@@ -1,3 +1,5 @@
+import { Checker } from "./components/checker";
+
 export default function Home() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
@@ -8,9 +10,9 @@ export default function Home() {
         checks the changes against fixed risk rules, and explains the result in
         plain English.
       </p>
-      <p className="mt-6 text-sm text-muted">
-        The transaction checker is being built. Devnet only.
-      </p>
+      <div className="mt-8">
+        <Checker />
+      </div>
     </main>
   );
 }

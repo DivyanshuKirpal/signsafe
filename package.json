@@ -15,6 +15,7 @@
     "setup:demo": "tsx scripts/setup-demo.ts",
     "scenarios:check": "tsx scripts/scenarios-check.ts",
     "fixtures:save": "tsx scripts/save-fixtures.ts",
+    "samples:print": "tsx scripts/print-samples.ts",
     "scan:secrets": "tsx scripts/scan-secrets.ts"
   },
   "description": "SignSafe: check what a Solana transaction will do before you sign it",

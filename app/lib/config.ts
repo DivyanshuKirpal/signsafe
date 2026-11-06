@@ -83,9 +83,15 @@ export const AI = {
 } as const;
 
 export const CACHE = {
-  /** Analysis results and accepted AI explanations, in memory. */
+  /** Analysis results, in memory (ARCHITECTURE 9.7: 10 minutes). */
   ttlMs: 10 * 60_000,
   maxEntries: 200,
+  /**
+   * Accepted AI explanations, keyed by a hash of the exact facts, so reuse is
+   * always for identical findings. Kept longer than analyses because the free
+   * Gemini tier allows only 20 requests per day per model (seen live 7 Nov 2026).
+   */
+  explanationTtlMs: 6 * 60 * 60_000,
 } as const;
 
 export const RATE_LIMIT = {

@@ -13,7 +13,7 @@ import { RateLimiter } from "./util/rate-limit";
 export type CachedAnalysis = Omit<AnalyzeResponse, "requestId" | "cache">;
 
 let analysisCache = new TtlCache<CachedAnalysis>(CACHE.maxEntries, CACHE.ttlMs);
-let explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.ttlMs);
+let explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs);
 let rateLimiter = new RateLimiter(RATE_LIMIT);
 let explainer: Explainer | undefined;
 
@@ -48,7 +48,7 @@ export function isCacheable(result: CachedAnalysis): boolean {
 /** Tests only: start from empty state. */
 export function resetServerState(): void {
   analysisCache = new TtlCache<CachedAnalysis>(CACHE.maxEntries, CACHE.ttlMs);
-  explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.ttlMs);
+  explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs);
   rateLimiter = new RateLimiter(RATE_LIMIT);
   explainer = undefined;
 }

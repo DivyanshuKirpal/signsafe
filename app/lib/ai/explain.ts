@@ -87,7 +87,7 @@ export function factsFingerprint(context: ExplanationContext, models: string): s
 }
 
 export function createGeminiExplainer(options: GeminiOptions & { cache?: TtlCache<Explanation> }): Explainer {
-  const cache = options.cache ?? new TtlCache<Explanation>(CACHE.maxEntries, CACHE.ttlMs, options.now);
+  const cache = options.cache ?? new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs, options.now);
   const log = options.log ?? (() => {});
   const models = `${options.model}|${options.fallbackModel ?? ""}`;
 

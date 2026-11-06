@@ -36,10 +36,11 @@ export interface SignSafeRpc {
   lastEndpoint(): EndpointLabel | undefined;
 }
 
-/** Removes anything that looks like a URL or an API key from text before logging it. */
+/** Removes anything that looks like a URL or an API key (RPC or Google) from text before logging it. */
 export function redactSecrets(text: string): string {
   return text
     .replace(/api[-_]?key=[^&\s"']+/gi, "api-key=[redacted]")
+    .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[redacted-key]")
     .replace(/https?:\/\/[^\s"']+/gi, "[url]");
 }
 

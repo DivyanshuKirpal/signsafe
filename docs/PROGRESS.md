@@ -19,7 +19,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M2 Simulate and diff | Completed and verified (Sat 7 Nov ~00:55 IST) |
 | M3 Rules and verdict | Completed and verified (Sat 7 Nov ~01:40 IST) |
 | M4 Scenarios | **Completed and verified** (Sat 7 Nov ~03:10 IST). Approved by the user for M4 only. Demo authority funded by the user (1 devnet SOL from Phantom). |
-| M5 AI | **Awaiting the user's explicit approval. Do not start.** Gemini work happens only in M5. |
+| M5 AI | **Approved by the user (M5 only, Sat 7 Nov ~03:55 IST), in progress.** Started from c8f58de. Effort: max (user). |
 | M6-M8 | Not approved |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.

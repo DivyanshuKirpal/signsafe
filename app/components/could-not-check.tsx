@@ -1,3 +1,4 @@
+import { couldNotCheckMessages } from "../lib/gaps";
 import type { DecodedTx, SimulationResult } from "../lib/types";
 import { Address } from "./address";
 
@@ -7,12 +8,8 @@ import { Address } from "./address";
  * run or failed, and accounts that were not compared.
  */
 export function CouldNotCheck({ decoded, simulation }: { decoded: DecodedTx; simulation: SimulationResult }) {
-  const items: string[] = decoded.warnings.map((w) => w.message);
-  if (!simulation.ran && simulation.error) {
-    items.push(simulation.error.userMessage);
-  } else if (simulation.ran && !simulation.ok && simulation.error) {
-    items.push(`The simulation failed, so the effects below could not be confirmed. ${simulation.error.userMessage}`);
-  }
+  // Same sentences the AI is given (app/lib/gaps.ts), so both always agree.
+  const items = couldNotCheckMessages(decoded, simulation);
   if (items.length === 0 && simulation.notWatched.length === 0) return null;
 
   return (

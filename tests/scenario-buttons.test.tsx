@@ -12,6 +12,13 @@ const analysis: AnalyzeResponse = {
   decoded: decodedOf({}),
   simulation: simulationOf({}),
   verdict: { level: "DANGER", label: "Danger: don't sign unless you're certain", reason: "Unlimited permission to spend tokens from a token account", complete: true, flags: [] },
+  explanation: {
+    source: "template",
+    summary: "Danger: unlimited permission to spend tokens from a token account.",
+    points: [],
+    advice: "Do not sign this unless you are certain you want to allow exactly what is described here.",
+    notice: { code: "AI_OFF", message: "AI explanations are switched off on this server." },
+  },
   timingsMs: { total: 1 },
 };
 

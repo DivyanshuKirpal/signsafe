@@ -283,18 +283,49 @@ export interface Verdict {
   flags: RiskFlag[];
 }
 
+/** Why the built-in explanation is shown instead of an AI one. */
+export type ExplanationNoticeCode =
+  | "AI_OFF"
+  | "AI_NOT_CONFIGURED"
+  | "AI_AUTH"
+  | "AI_UNAVAILABLE"
+  | "AI_TIMEOUT"
+  | "AI_BAD_REQUEST"
+  | "AI_REJECTED";
+
+/**
+ * Plain-English explanation of a finished analysis. It never changes the
+ * verdict: the rules decide, the explanation only describes their result.
+ */
+export interface Explanation {
+  /** "ai": a Gemini answer that passed validation; "template": SignSafe's built-in text. */
+  source: "ai" | "template";
+  /** modelVersion reported by the API for an accepted AI answer. */
+  model?: string;
+  summary: string;
+  points: string[];
+  advice: string;
+  /** Present when the built-in text is shown: why the AI answer is not used. */
+  notice?: { code: ExplanationNoticeCode; message: string };
+  /** True when an AI answer for exactly the same facts was reused. */
+  reused?: boolean;
+}
+
 export interface ApiError {
   error: { code: string; message: string };
 }
 
-/** The explanation (M5) is added later. */
 export interface AnalyzeResponse {
   requestId: string;
   cluster: "devnet";
   decoded: DecodedTx;
   simulation: SimulationResult;
   verdict: Verdict;
+  /** Written after the verdict is final; cannot change it. */
+  explanation: Explanation;
   /** The optional "your address" echoed back; it only personalises wording, never the verdict. */
   userAddress?: string;
+  /** Set when this result came from the server's short-lived cache. */
+  cache?: { hit: boolean; storedAt?: string };
   timingsMs: Record<string, number>;
 }

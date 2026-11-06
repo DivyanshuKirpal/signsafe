@@ -50,3 +50,48 @@ export const LIMITS = {
   maxLogLines: 50,
   maxLogLineChars: 200,
 } as const;
+
+/** AI explanation, caching and rate limits (ARCHITECTURE 9.6-9.7). */
+export const AI = {
+  /** The whole /api/analyze request must finish within this, AI attempts included. */
+  routeDeadlineMs: 35_000,
+  /** One Gemini HTTP attempt, further capped by the time left before the route deadline. */
+  attemptTimeoutMs: 20_000,
+  /** Do not start an attempt with less time than this left. */
+  minAttemptMs: 2_000,
+  /** Wait before retrying a 429/503/timeout: between these (ARCHITECTURE: 1-2 s). */
+  retryDelayMinMs: 1_000,
+  retryDelayMaxMs: 2_000,
+  temperature: 0.2,
+  /**
+   * ARCHITECTURE suggests about 400; thinking tokens count toward this limit,
+   * so a little headroom avoids cut-off JSON. Thinking is set to the lowest level.
+   */
+  maxOutputTokens: 1_024,
+  /** Lowest thinking levels to try, in order; a 400 naming the level steps down, then the field is dropped. */
+  thinkingLevels: ["MINIMAL", "LOW"] as const,
+  /** Untrusted text sent to the model (memos, program logs) is capped. */
+  maxUntrustedMemos: 3,
+  maxUntrustedMemoChars: 200,
+  maxUntrustedLogLines: 6,
+  maxUntrustedLogChars: 120,
+  /** Validation limits for an AI answer. */
+  maxSummarySentences: 2,
+  maxPoints: 5,
+  maxPointWords: 25,
+  maxAdviceSentences: 1,
+} as const;
+
+export const CACHE = {
+  /** Analysis results and accepted AI explanations, in memory. */
+  ttlMs: 10 * 60_000,
+  maxEntries: 200,
+} as const;
+
+export const RATE_LIMIT = {
+  /** Fresh analyses per client IP per window (cached results are not counted). */
+  maxRequests: 10,
+  windowMs: 60_000,
+  /** Bound on the number of IPs tracked at once. */
+  maxTrackedClients: 5_000,
+} as const;

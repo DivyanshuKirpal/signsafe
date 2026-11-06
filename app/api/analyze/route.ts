@@ -9,7 +9,8 @@ import { z } from "zod";
 import { analyzeTransaction } from "@/app/lib/analyze";
 import { LIMITS } from "@/app/lib/config";
 import { DecodeError } from "@/app/lib/solana/decode";
-import { redactSecrets, rpcFromEnv, type SignSafeRpc } from "@/app/lib/solana/rpc";
+import { redactSecrets } from "@/app/lib/solana/rpc";
+import { getServerRpc } from "@/app/lib/solana/server-rpc";
 import type { AnalyzeResponse } from "@/app/lib/types";
 import { toJsonSafe } from "@/app/lib/util/bigint-json";
 import { inputTag, jsonError } from "@/app/lib/util/errors";
@@ -31,13 +32,6 @@ const RequestSchema = z.object({
     }),
   ]),
 });
-
-// One RPC client per server process, so the devnet check is cached.
-let cachedRpc: SignSafeRpc | null | undefined;
-function getRpc(): SignSafeRpc | null {
-  if (cachedRpc === undefined) cachedRpc = rpcFromEnv();
-  return cachedRpc;
-}
 
 export async function POST(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -69,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const analysis = await analyzeTransaction(tx, {
-      rpc: getRpc(),
+      rpc: getServerRpc(),
       log: (message) => console.warn(`[analyze ${requestId}] input ${inputTag(tx)}: ${message}`),
     }, { userAddress: userAddress || undefined });
     const response: AnalyzeResponse = { requestId, ...analysis };

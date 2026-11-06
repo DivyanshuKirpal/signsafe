@@ -6,6 +6,7 @@ import { UserAddressContext } from "./address";
 import { CouldNotCheck } from "./could-not-check";
 import { FlagList } from "./flag-list";
 import { InstructionList } from "./instruction-list";
+import { ScenarioButtons, ScenarioRevealCard, type ScenarioReveal, type ScenarioSummary } from "./scenario-buttons";
 import { SimulationPanel } from "./simulation-panel";
 import { TxInput } from "./tx-input";
 import { TxOverview } from "./tx-overview";
@@ -32,9 +33,11 @@ export function Checker() {
   const [input, setInput] = useState("");
   const [userAddress, setUserAddress] = useState("");
   const [state, setState] = useState<State>({ status: "idle" });
+  const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
-  async function check() {
+  /** The one analysis path: pasted text and demo scenarios both go through here. */
+  async function check(tx: string = input): Promise<boolean> {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -45,28 +48,60 @@ export function Checker() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          input: { kind: "base64", tx: input, ...(userAddress.trim() ? { userAddress: userAddress.trim() } : {}) },
+          input: { kind: "base64", tx, ...(userAddress.trim() ? { userAddress: userAddress.trim() } : {}) },
         }),
         signal: controller.signal,
       });
       const body: unknown = await res.json().catch(() => null);
-      if (controllerRef.current !== controller) return; // superseded by a newer check
+      if (controllerRef.current !== controller) return false; // superseded by a newer check
       if (!res.ok) {
         setState({
           status: "error",
           message: isApiError(body) ? body.error.message : `The server answered with status ${res.status}.`,
         });
-        return;
+        return false;
       }
       setState({ status: "success", result: body as AnalyzeResponse });
+      return true;
     } catch {
-      if (controllerRef.current !== controller) return; // superseded by a newer check
+      if (controllerRef.current !== controller) return false; // superseded by a newer check
       setState({
         status: "error",
         message: "Could not reach the SignSafe server, or it took too long. Check your connection and try again.",
       });
+      return false;
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  function checkPasted() {
+    setReveal(null);
+    void check();
+  }
+
+  async function runScenario(scenario: ScenarioSummary) {
+    setReveal(null);
+    setState({ status: "loading" });
+    try {
+      const res = await fetch("/api/scenarios", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: scenario.id }),
+      });
+      const body: unknown = await res.json().catch(() => null);
+      if (!res.ok || typeof (body as { txBase64?: unknown })?.txBase64 !== "string") {
+        setState({ status: "error", message: isApiError(body) ? body.error.message : "The demo transaction could not be built." });
+        return;
+      }
+      const tx = (body as { txBase64: string }).txBase64;
+      setInput(tx); // visible in the paste box: it is a real, unsigned devnet transaction
+      if (!(await check(tx))) return;
+      // Only now, after the pipeline has given its verdict, ask what the scenario really was.
+      const revealed = await fetch(`/api/scenarios?reveal=${encodeURIComponent(scenario.id)}`).then((r) => (r.ok ? r.json() : null));
+      if (revealed) setReveal(revealed as ScenarioReveal);
+    } catch {
+      setState({ status: "error", message: "Could not reach the SignSafe server to build the demo transaction." });
     }
   }
 
@@ -74,12 +109,16 @@ export function Checker() {
     <div className="space-y-8">
       <TxInput
         value={input}
-        onChange={setInput}
+        onChange={(value) => {
+          setInput(value);
+          setReveal(null);
+        }}
         userAddress={userAddress}
         onUserAddressChange={setUserAddress}
-        onSubmit={check}
+        onSubmit={checkPasted}
         busy={state.status === "loading"}
       />
+      <ScenarioButtons busy={state.status === "loading"} onPick={(s) => void runScenario(s)} />
 
       <div aria-live="polite">
         {state.status === "loading" && <p className="text-sm text-muted">Decoding, simulating on devnet and checking rules...</p>}
@@ -95,6 +134,9 @@ export function Checker() {
         <UserAddressContext.Provider value={state.result.userAddress}>
           <div className="space-y-6">
             <VerdictCard verdict={state.result.verdict} />
+            {reveal && (
+              <ScenarioRevealCard reveal={reveal} actualLevel={state.result.verdict.level} actualLabel={state.result.verdict.label} />
+            )}
             <CouldNotCheck decoded={state.result.decoded} simulation={state.result.simulation} />
             <FlagList flags={state.result.verdict.flags} />
             <SimulationPanel simulation={state.result.simulation} />

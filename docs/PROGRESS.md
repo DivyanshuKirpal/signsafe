@@ -18,56 +18,59 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M1 Decode | Completed and verified (Sat 7 Nov ~00:20 IST) |
 | M2 Simulate and diff | Completed and verified (Sat 7 Nov ~00:55 IST) |
 | M3 Rules and verdict | Completed and verified (Sat 7 Nov ~01:40 IST) |
-| M4 Scenarios | **Completed and verified** (Sat 7 Nov ~03:10 IST). Approved by the user for M4 only. Demo authority funded by the user (1 devnet SOL from Phantom). |
-| M5 AI | **Approved by the user (M5 only, Sat 7 Nov ~03:55 IST), in progress.** Started from c8f58de. Effort: max (user). |
-| M6-M8 | Not approved |
+| M4 Scenarios | Completed and verified (Sat 7 Nov ~03:10 IST) |
+| M5 AI | **Completed and verified** (Sat 7 Nov ~04:40 IST). Approved by the user for M5 only (effort max), started from c8f58de. |
+| M6 Polish | **Awaiting the user's explicit approval. Do not start.** |
+| M7-M8 | Not approved |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
-- **Next recommended effort (M5): high.** The AI step has edge cases that matter for the demo: Gemini request/response format and field names for JSON output and thinking level (must be checked against the live API), retries/fallback model/template, output validation, the contradiction check, and S8 prompt injection.
+- **Next recommended effort (M6): medium.** Clear scope (UI states, accessibility pass, README draft, fixtures:save + replay). Nothing security-critical changes; the verdict and AI layers are done and tested.
 
 ## Completed and verified
-### M0-M2 (summary)
-- Template scaffold, env/secret tooling, git; decoder (legacy/v0/v1, official program clients); devnet simulation with failover RPC, genesis guard, lookup tables, pre/post state diff, inner instructions, error mapping; `live:check` + live fixtures.
+### M0-M4 (summary)
+- Scaffold, env/secret tooling, git; decoder (legacy/v0/v1); devnet simulation and state diff; 12 risk rules + verdict (DANGER > UNKNOWN > CAUTION > LOW_RISK, `complete` flag); demo setup (funded, rerun-safe) and scenarios S1-S8 with buttons; `live:check`, `scenarios:check`, recorded fixtures.
 
-### M3 (rules and verdict)
-- `app/lib/risk/*`: 12 rules, merge per account/problem, verdict DANGER > UNKNOWN > CAUTION > LOW_RISK with `complete` flag, templates; VerdictCard, FlagList, optional user address ("(you)" only).
+### M5 (AI explanation)
+- Pipeline: decode -> simulate -> rules/verdict -> **explanation** (`app/lib/analyze.ts`). The explainer receives only `buildExplanationContext(...)` of the finished analysis; it returns text and cannot change the verdict (tested, including an explainer that tries).
+- `app/lib/ai/facts.ts`: facts sent to Gemini (verdict, findings with "based on" lines, our instruction descriptions, account changes, simulation status, could-not-check list, optional yourAddress) + capped `untrusted` block (memos, program logs). Never: raw tx, keys, URLs, scenario labels/expected verdicts. Also the validator's meta (coverage, grounding from trusted facts only).
+- `app/lib/ai/prompt.ts`: system instruction + JSON schema. `app/lib/ai/gemini.ts`: REST client (key in `x-goog-api-key`), JSON schema output, thinking MINIMAL -> LOW -> none per model, retry/fallback per ARCHITECTURE 9.6 bounded by the 35 s route deadline, 400 `API_KEY_INVALID` = auth.
+- `app/lib/ai/validate.ts`: zod shape + meaning checks (guarantees, signing advice vs verdict, downplaying, grounding of amounts/percentages/addresses, invented transfers, hedge for incomplete checks, coverage of findings and SOL transfers).
+- `app/lib/ai/template.ts` (built-in explanation, passes the same validator) and `app/lib/ai/explain.ts` (cache of accepted answers keyed by the exact facts, 6 h; notices; `explainerFromEnv`: AI_ENABLED=false or no key -> built-in, no call).
+- `/api/analyze`: analysis cache (10 min, 200, tx + userAddress), `fresh: true` = Check again, per-IP rate limit 10/min (cached answers and bad requests free, 429 + Retry-After), `maxDuration = 40`. `app/lib/server-state.ts`, `app/lib/util/cache.ts`, `app/lib/util/rate-limit.ts`, `app/lib/gaps.ts`.
+- UI: `explanation-panel.tsx` beside the VerdictCard ("AI explanation" + model, or "Built-in explanation" + reason), "Saved result from ..." note and **Check again** button.
+- `scenarios:check -- --ai` (live explanation step); default stays AI off.
 
-### M4 (scenarios), plus two rule decisions made at the start of M4
-- **Empty-balance decision:** known empty token account + external delegate: unlimited -> DANGER, finite positive -> CAUTION with exact allowance (`allowanceRaw`); zero allowance never fires.
-- **Ownership correction:** without verified owner data the instruction's owner is an unverified claim; approval / set-authority / close-account / assign then give a CAUTION "could not be verified" flag + R-UNRESOLVED gap -> "Could not fully check", unless verified Danger exists elsewhere (kept, gap shown). Regression test: delegate claimed as owner -> UNKNOWN; mutation-checked.
-- `app/lib/scenarios/index.ts` (S1-S8: pitch shown on button, description + expected revealed after the check), `build.ts` (unsigned v0, real recent blockhash, fee payer = owner), `demo-config.ts` (public addresses, statically scoped read).
-- `app/api/scenarios/route.ts`: `GET` list (no expected verdicts), `GET ?reveal=<id>`, `POST {id, owner?}` -> `{ txBase64, owner }` (devnet check first).
-- UI: `scenario-buttons.tsx` (buttons + reveal card); `checker.tsx` routes pasted text and scenarios through the same `check(tx)`.
-- `scripts/setup-demo.ts` (rerun-safe; see DECISIONS) and `scripts/scenarios-check.ts` (AI off, delay, exit 1 on mismatch, `--record`).
-- Demo accounts on devnet (public, in `data/demo.devnet.json`): authority `7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3`, victim `4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r` (0.05 SOL, 1,000 DEMO), attacker `59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB`, DEMO mint `5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss` (6 decimals), victim token account `4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1`, friend `F61U...AG9Y`, S7 program SPL Noop `noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV`. Keypairs in `keys/` (git-ignored; never committed or printed).
+### M5 results, by source
+**Live provider (Gemini REST, 7 Nov 2026, primary gemini-3.5-flash served as gemini-3.6-flash):**
+- Field check: `thinkingLevel` MINIMAL accepted by the primary (0 thought tokens vs 167 without), rejected by gemini-flash-latest (400 naming the level); `responseJsonSchema` and `responseSchema` both accepted; invalid key -> HTTP 400 `API_KEY_INVALID`; unknown model -> 404.
+- `scenarios:check -- --ai` run 1: **7/8 explanations accepted from Gemini**, including **S3** (explains the 0.01 SOL payment and the separate unlimited permission, "No tokens move right now") and **S8** (Danger kept; memo mentioned only as sender text; no "safe"); S2 fell back (`SIGNING_ADVICE`), traced to a validator false positive and fixed with a regression test built from that exact answer.
+- Through the running `/api/analyze` route: S3 accepted (both parts explained), repeat served from the cache (`cache.hit`), Check again re-asked Gemini (accepted, different wording), **S8 accepted from Gemini, verdict Danger**. Server log contained no key, prompt or memo text.
+- Bogus key (live): one call, HTTP 400 INVALID_ARGUMENT -> built-in with AI_AUTH, log "check GEMINI_API_KEY", key not logged. AI_ENABLED=false: zero calls.
+- `scenarios:check -- --ai` run 2 (after the quota ran out): primary 429 `RESOURCE_EXHAUSTED` (daily), fallback 503/timeouts -> built-in explanations for 7/8 (S6 still got through); all 8 verdicts unchanged.
+**Mocked (offline tests):** invalid JSON, schema/format errors, 401/403/400 API_KEY_INVALID, 429, 503, timeouts, network errors, 404 -> fallback, 400 thinking step-down (remembered), 400 strip-and-retry, deadline (none / mid-way / real hanging attempt cut off), blocked answer, AI off, not configured, cache reuse / Check again / different facts never reuse, "go ahead and sign" for Danger -> built-in shown in the UI.
+**Built-in fallback:** used for AI off, missing key, rejected answers and provider failures; its text passes the validator for all 14 fixtures; "Could not fully check" and "Danger with incomplete evidence" pages keep the gap visible in the VerdictCard, the "What could not be checked" panel and the explanation.
 
-### M4 verification
-- Setup runs: (1) keys created, stopped for funding (exit 2, nothing sent); (2) rerun reused the same keys, still stopped; (3) after the user funded 1 SOL: balance read first, then 3 confirmed devnet transactions (create mint, mint 1,000 DEMO, send 0.05 SOL); (4) rerun: "to do: nothing", no transaction, balances unchanged (authority 0.94742476 SOL), data file unchanged except `updatedAt`.
-- `npm run scenarios:check` (live devnet, AI off): **8/8 match** (S1 No known risks found; S2, S3, S4, S5, S6, S8 Danger; S7 Caution); all simulations ok; S8 Danger with the memo as an info flag. Mismatch path proven: S1's expectation temporarily changed -> FAIL and exit 1 (reverted).
-- Scenario buttons: jsdom test (call order build -> analyze -> reveal; tx in paste box; same `kind: "base64"` path) and the same HTTP sequence against the dev server with live devnet: 8/8 unsigned, simulated ok, verdict matches. Dev log clean.
-- Fixtures: `tests/fixtures/scenarios/*.json` (live, M4) replayed offline; `tests/fixtures/live/*.json` (M2/M3) unchanged.
-
-## Test and check status (end of M4)
-- `npm run check`: pass (typecheck clean, lint clean, **195/195 tests** in 15 files: risk-rules 48, decode 29, simulation-units 19, scenarios 15, risk-pipeline 14, scenarios-replay 12, simulate-pipeline 11, format 10, analyze-route 9, scripts 8, state-diff 7, simulation-ui 4, verdict-ui 4, instruction-list 3, scenario-buttons 2).
+## Test and check status (end of M5)
+- `npm run check`: pass (typecheck clean, lint clean, **270/270 tests** in 21 files: risk-rules 48, decode 29, ai-validate 24, ai-gemini 24, simulation-units 19, scenarios 15, risk-pipeline 14, ai-pipeline 13, scenarios-replay 12, simulate-pipeline 11, format 10, analyze-route 9, scripts 8, state-diff 7, explanation-ui 5, cache-rate-limit 5, verdict-ui 4, simulation-ui 4, analyze-route-cache 4, instruction-list 3, scenario-buttons 2).
 - `npm run build`: pass, no warnings.
-- `npm run live:check`: 6 live devnet cases pass. `npm run scenarios:check`: 8/8 live.
-- `npm run scan:secrets`: clean (keys/ never staged; fixtures have no URLs or keys).
+- `npm run scenarios:check` (AI off, live devnet): 8/8. Fixture regressions (scenarios-replay, risk-pipeline, simulate-pipeline, ai-pipeline): pass.
+- `npm run scan:secrets`: clean.
 
 ## Partially implemented work
-- None. M5 has not started.
+- None. M6 has not started.
 
-## Next three steps (once M5 is approved)
-1. `app/lib/ai/gemini.ts`: REST `generateContent` with the key in `x-goog-api-key` (server only), 20 s timeout, retries per ARCHITECTURE 9.6 (429/503/timeout -> retry, fallback model, template; 404 -> fallback; 400 -> retry without optional fields; 401/403 -> template), `modelVersion` recorded. Check the current field names for JSON output and the thinking level against the live API first.
-2. `app/lib/ai/prompt.ts` + `schema.ts` + `explain.ts`: compact facts (verdict, flags, decoded instructions, state changes) with an UNTRUSTED block for memos/logs; zod validation, length caps, control-character stripping; contradiction check ("safe" under DANGER etc.); template fallback from `FALLBACK_SENTENCES`. AI never changes the verdict.
-3. Explanation UI (labelled "AI explanation" / "Built-in explanation"), in-memory cache and rate limit (ARCHITECTURE 9.7), `scenarios:check -- --ai` to confirm S8 is not called safe.
+## Next three steps (once M6 is approved)
+1. UI states and accessibility pass (keyboard, 375 px, contrast, loading per step), user browser check of the result page.
+2. `scripts/save-fixtures.ts` (`fixtures:save`) and a "Replay saved example" option, labelled with the time it was saved; ideally captured when Gemini quota is available so replays include accepted AI explanations.
+3. README draft per ARCHITECTURE 16, `docs/LEARNING_NOTES.md` review, and the manual QA list from ARCHITECTURE 13.
 
 ## Known issues
-- Without any RPC, owner-dependent findings are "could not be verified" (by design since the ownership correction).
-- Inner instructions of known programs come back node-parsed in the case observed (qualified note in DECISIONS).
-- The public devnet fallback rate-limits some heavy methods (only `live:check` discovery uses them).
+- **Gemini free tier: 20 requests per day for gemini-3.5-flash** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), used up on 7 Nov (reset about 14:00 IST, midnight Pacific). The fallback gemini-flash-latest was overloaded all session. Until the reset, explanations fall back to the built-in text (verdicts unaffected). See "Decisions awaiting the user".
+- Each live AI call took about 6.5-7.7 s inside the route (well within the 35 s deadline).
+- The rate limit (10 fresh checks/min/IP) can be hit when clicking many scenarios quickly while recording.
+- Without any RPC, owner-dependent findings are "could not be verified" (by design).
 - Windows `git` CRLF warnings; npm 11 skipped `esbuild` postinstall (tsx works); 8 moderate `npm audit` advisories in template deps; stopping a background `next dev` on Windows leaves a child process on the port.
-- Not yet looked at in a browser by the user: VerdictCard/FlagList/scenario buttons (looks, keyboard, 375 px) - M6 QA.
-- Demo authority keeps ~0.947 devnet SOL; the victim's 0.05 SOL is only used by simulations (nothing is sent in scenarios).
+- Result pages not yet checked by the user in a browser (looks, keyboard, 375 px) - M6.
 
 ## Environment variables (names only; values live in `.env.local`, which the user creates)
 - Server-only: `SOLANA_RPC_URL` (required), `SOLANA_RPC_FALLBACK_URL`, `GEMINI_API_KEY` (required unless `AI_ENABLED=false`), `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `AI_ENABLED`.
@@ -75,17 +78,21 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 
 ## How to run and verify
 - `npm install`; `.env.local` from `.env.example` (the user fills values; never print the file); `npm run check:env`.
-- `npm run setup:demo` (already done; rerun is safe), `npm run dev` -> http://localhost:3000, click a scenario button or paste a transaction.
-- `npm run check`, `npm run build`, `npm run live:check`, `npm run scenarios:check`, `npm run scan:secrets` before every push.
+- `npm run dev` -> http://localhost:3000, click a scenario button or paste a transaction; "Check again" re-runs without the cache.
+- `npm run check`, `npm run build`, `npm run scenarios:check` (AI off), `npm run scan:secrets` before every push. `npm run scenarios:check -- --ai` uses 8 Gemini requests (of 20/day).
 
 ## Unpushed local commits
-- None (the M4 checkpoint commit is pushed; verify with `git status -sb`).
+- None (the M5 checkpoint commit is pushed; verify with `git status -sb`).
 
 ## Decisions awaiting the user
-- Approval to start M5 (recommended effort: high).
+- Approval to start M6 (recommended effort: medium).
+- **Gemini quota for the demo** (20 requests/day on the primary model). Options, no paid options suggested:
+  - A: record after the daily reset (about 14:00 IST) and keep Gemini calls for the demo itself (the 6 h explanation cache reuses answers for the same findings).
+  - B: the user creates a second free key in another Google Cloud project (quota is per project) and pastes it into `.env.local` themself.
+  - C: switch `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` to models with their own free quota (needs a live check after the reset).
+  - D: rely on saved replays (M6 fixtures) captured while quota is available, labelled as saved.
 - Read the MLH Challenges rules when convenient.
-- Optional now: open `npm run dev`, click S3 and S8, and check the layout/wording in the browser.
 
 ## Decided by the user
 - 6 Nov: scaffold via sibling folder; npm; demo funding option A; MIT license.
-- 7 Nov: schedule; MLH Challenges; personal targets 7:30 PM / 9:15 PM IST; M2 simulation only; M3 rules/verdict; empty-balance rule; ownership correction (instruction owner unverified without state); M4 scenarios (funded 1 devnet SOL); Gemini only in M5.
+- 7 Nov: schedule; MLH Challenges; personal targets 7:30 PM / 9:15 PM IST; M2 simulation only; M3 rules/verdict; empty-balance rule; ownership correction; M4 scenarios (funded 1 devnet SOL); M5 Gemini explanations only (max effort).

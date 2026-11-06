@@ -1,0 +1,201 @@
+{
+  "case": "deactivated-lookup-table",
+  "description": "v0 transfer that uses a deactivated devnet lookup table (the node refuses it)",
+  "source": "live devnet RPC, recorded by scripts/live-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T19:06:22.483Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAvilEjxJODmZMUs92zyEq39LqStvJhdIQv7IQ3HEYTWgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADMSQ6SjNLjhzuzQ/yV2jMXnKYPTb9GwsNukSmdVdTmuQEBAgACDAIAAACAlpgAAAAAAAEwzdvnBmzzr+93osYr7qBn76oNV1fX2B4IWPQL0fIE0QEDAA==",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "22"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "4HWdfpj3pbNQfV1fHoGx1tykAJVzUx6Brz3Wru8ZzVK6"
+        ],
+        {
+          "commitment": "confirmed",
+          "encoding": "jsonParsed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519398727"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "6299200"
+              },
+              "data": {
+                "program": "address-lookup-table",
+                "parsed": {
+                  "info": {
+                    "addresses": [
+                      "DrxeXADAzAeHZE4psFeNbc8nzmhasojSs1eWoTA8K138",
+                      "DagLHPLvfFMQ2xX5fY29YJju578LVntosUWwEuJWQz9m",
+                      "11111111111111111111111111111111",
+                      "3KhdYGe4da3ZxnoWwTMTZJQg8Gm2WSwwtjTbXNi31sVb",
+                      "4MwozAxy4tzHcCB1Rvdr9sE4sPNh89WoATpXHZyM5gLS",
+                      "Bjxz7gXXBdQWTMFKWthZ3VSAS6Msxs3vahzUHoBm4aB9",
+                      "8EftqyHMgJBtMKfXsVWvKpG6zRtHWHQ3ahbyjuHkMCPk",
+                      "37AEq9DzfnUwr9TnQs8SCwqC4at1AFGBEMmoVopRF3sw",
+                      "HXjDKnaRukrus1mi8Ttf6yksKsn5h9d86Hb36yUFjPah",
+                      "BkJoK9YLuufkLmiT5QNV5bAodD4ihKknhvra7vbURhYE",
+                      "BEpySCrnQ74R45rwEqWHg4cPv2EcG4KCcK2jefxpkWPx",
+                      "738y5BN6H6gyL7wd7BqmxUJfixDA57X1sfb2K9hUDgLD",
+                      "5Pgf8kHD3NZBZC4XY612QdxkaYXWeCCaZ8NsexFa1S7q",
+                      "5jVCw6q8pAhfTra2gPoKitTd5L93iGe6mA9ssj7z9inD",
+                      "DgHsC1UfFqz2eL7qJVuFjNjJSbkK9Qr7CZytuUTRaMZz",
+                      "HG5bB6TpBGKAaTTCVYGQwJa7hfPYKAVYRz64Gco9hMb1",
+                      "2wR2RnZXxDeneQvLxnxXbXSPqKcrC2P9hY96AimWeAwZ",
+                      "F1KXs9qW5XXUZjsRPRCiff5fZWq4cuWjswbgWgxUXjqG",
+                      "623qkhHYBUE3XiN418tY8NgXxm9PNYqZUDaanxXAvZYT",
+                      "B19RodgkHq4jf9fLq5oeA3YGHBzcjqhjwtjqF7TkMRZy",
+                      "8JhWRsADHxjFcQ18x7pXhLi38di1a5YACq5eXq6yQcHL",
+                      "6WysDhA1GKrbDGtFYyHXRdPnFc3KYT5bCy2vft3ZP5LJ",
+                      "2hQLHUeRUp9NfC2HaY8Xw1A8diHEhMz7KkUkExqFQw3v",
+                      "CxfXwhVe5xtq8HgxTFWR8P9xtMSLTgXcihM95XgMT3Ed",
+                      "BLD5a6gmTqeScvVuS5paHgoAum2UXA2pu79QxZ6ZysoM",
+                      "1MacbmamzRPYuMuxB2JAea4UYiTWR1XjUkWr3mMmcrR",
+                      "Ed44MkbzVhPTMXh5pDVuLvVtekwpYexQ9CqSA3MsBMG7",
+                      "6emzJCLGqr1YirW3rjYGQHCxfXovvTnhjGKvqbCe57sn",
+                      "HySgKwWhh9BC6uEeYwPn4kHH4Sn3J92jZnwyGzFtYtUz",
+                      "3dxJRJpnY8S1V8AGbxwDADHYAdLHeFZNM4anXCZyYPcM",
+                      "3kgDqL5HsrKqNwcAzUbRoMtXA9nkU3jPjstQkTnpg6hr",
+                      "9r2WVbP2vRUhCS2garnzRY2cECNDxsSzho4qQzma7wws",
+                      "F3esZCZEVrVhH3dRNn68vGR5iaaib7m9X24NwfECS1mY"
+                    ],
+                    "authority": "9W4d3DGzV3swyKCJo2wfvd4vPpnVszXaUZTtdhtuBPYU",
+                    "deactivationSlot": "519395618",
+                    "lastExtendedSlot": "519395607",
+                    "lastExtendedSlotStartIndex": {
+                      "$bigint": "20"
+                    }
+                  },
+                  "type": "lookupTable"
+                },
+                "space": {
+                  "$bigint": "1112"
+                }
+              },
+              "owner": "AddressLookupTab1e1111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "1112"
+              }
+            }
+          ]
+        },
+        "id": "23"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+          "3KhdYGe4da3ZxnoWwTMTZJQg8Gm2WSwwtjTbXNi31sVb"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519398729"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "506657270258"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            },
+            {
+              "lamports": {
+                "$bigint": "1176240"
+              },
+              "data": [
+                "mwyq4B76zIJ+T278wPnmG+XEGupwhQ/zyTkpCCmwpyXHKD6GSbT26f8=",
+                "base64"
+              ],
+              "owner": "DrxeXADAzAeHZE4psFeNbc8nzmhasojSs1eWoTA8K138",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "41"
+              }
+            }
+          ]
+        },
+        "id": "24"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAvilEjxJODmZMUs92zyEq39LqStvJhdIQv7IQ3HEYTWgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADMSQ6SjNLjhzuzQ/yV2jMXnKYPTb9GwsNukSmdVdTmuQEBAgACDAIAAACAlpgAAAAAAAEwzdvnBmzzr+93osYr7qBn76oNV1fX2B4IWPQL0fIE0QEDAA==",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+              "3KhdYGe4da3ZxnoWwTMTZJQg8Gm2WSwwtjTbXNi31sVb"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": {
+            "$bigint": "-32602"
+          },
+          "message": "invalid transaction: Transaction loads an address table account that doesn't exist"
+        },
+        "id": "25"
+      }
+    }
+  ]
+}

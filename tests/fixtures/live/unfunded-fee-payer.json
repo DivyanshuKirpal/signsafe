@@ -1,0 +1,131 @@
+{
+  "case": "unfunded-fee-payer",
+  "description": "transfer whose fee payer does not exist on devnet (simulation fails)",
+  "source": "live devnet RPC, recorded by scripts/live-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T19:06:23.511Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDgKi4lMq2DnraNB+noeljKFNKmfx/aPcN3z2ny4UikJ1i52xiFHHo7LCrb6TvuPleehQA1Dp0Mol9vSnBTpGYbQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzEkOkozS44c7s0P8ldozF5ymD02/RsLDbpEpnVXU5rkBAgIAAQwCAAAAgJaYAAAAAAA=",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "26"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "9fEQNpnF4giGSCxkFxqooqeLUQvz2gCPk9jPZgeuYgd2",
+          "7f5dL9xWdGB8oLjT7Bkv71MwgaMWQUYGpV8EgdsQgvfN"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519398733"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            null,
+            null
+          ]
+        },
+        "id": "27"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDgKi4lMq2DnraNB+noeljKFNKmfx/aPcN3z2ny4UikJ1i52xiFHHo7LCrb6TvuPleehQA1Dp0Mol9vSnBTpGYbQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzEkOkozS44c7s0P8ldozF5ymD02/RsLDbpEpnVXU5rkBAgIAAQwCAAAAgJaYAAAAAAA=",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "9fEQNpnF4giGSCxkFxqooqeLUQvz2gCPk9jPZgeuYgd2",
+              "7f5dL9xWdGB8oLjT7Bkv71MwgaMWQUYGpV8EgdsQgvfN"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.1",
+            "slot": {
+              "$bigint": "519398735"
+            }
+          },
+          "value": {
+            "accounts": [
+              null,
+              null
+            ],
+            "err": "AccountNotFound",
+            "fee": null,
+            "innerInstructions": null,
+            "loadedAccountsDataSize": {
+              "$bigint": "0"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [],
+            "postBalances": [
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "postTokenBalances": [],
+            "preBalances": [
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "preTokenBalances": [],
+            "replacementBlockhash": {
+              "blockhash": "3JsniNVVaR2S7JdXjnFDuDkCtbUpeSHkzXx8K2df933U",
+              "lastValidBlockHeight": {
+                "$bigint": "506550459"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "0"
+            }
+          }
+        },
+        "id": "28"
+      }
+    }
+  ]
+}

@@ -16,6 +16,8 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
+          // Tests never use a real RPC; live checks are a separate script (npm run live:check).
+          env: { SOLANA_RPC_URL: "", SOLANA_RPC_FALLBACK_URL: "", GEMINI_API_KEY: "" },
           include: ["tests/**/*.test.ts"],
         },
       },

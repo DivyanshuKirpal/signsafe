@@ -43,13 +43,21 @@ export interface DecodedIx {
   accountCount: number;
   dataLength: number;
   parseError?: string;
+  /**
+   * Who decoded it: our program clients ("client"), or the RPC node's own
+   * parser ("rpc"; simulation returns known inner instructions pre-parsed).
+   */
+  decodedBy?: "client" | "rpc";
+  /** Mint and decimals looked up from the token account's state (M2). */
+  token?: { mint: string; decimals: number };
 }
 
 export type DecodeWarningCode =
   | "LOOKUP_TABLE_UNRESOLVED"
   | "INSTRUCTION_PARSE_FAILED"
   | "V1_CONFIG_UNREADABLE"
-  | "OVERSIZED_FOR_VERSION";
+  | "OVERSIZED_FOR_VERSION"
+  | "WATCH_LIST_TRUNCATED";
 
 /**
  * Something that limits what we could see. Warnings with these codes make the
@@ -103,14 +111,105 @@ export type DecodeErrorCode =
   | "NOT_A_TRANSACTION"
   | "UNSUPPORTED_VERSION";
 
+export type StateChangeKind =
+  | "sol"
+  | "token"
+  | "delegate"
+  | "tokenOwner"
+  | "closeAuthority"
+  | "programOwner"
+  | "closed"
+  | "created";
+
+/**
+ * One difference between an account's state before and after simulation.
+ * Amounts are raw integers as decimal strings.
+ */
+export interface StateChange {
+  address: string;
+  kind: StateChangeKind;
+  /**
+   * sol: lamports. token: raw amount. delegate: delegate address (null = none).
+   * tokenOwner/closeAuthority: address. programOwner/created/closed: owning program.
+   */
+  before: string | null;
+  after: string | null;
+  /** sol and token: after - before (negative = decrease). */
+  delta?: string;
+  mint?: string;
+  decimals?: number;
+  /** delegate: the allowance (delegatedAmount), raw. */
+  allowanceBefore?: string;
+  allowanceAfter?: string;
+  /** For token-account changes: the wallet that owns the token account (before). */
+  tokenAccountOwner?: string;
+  /** sol change of the fee payer: the network fee included in the delta, lamports. */
+  includesFeeLamports?: string;
+}
+
+export type WatchRole = "feePayer" | "signer" | "writable" | "mint";
+
+export interface WatchedAccount {
+  address: string;
+  roles: WatchRole[];
+  existedBefore: boolean;
+  existsAfter: boolean | null;
+}
+
+export type SimulationErrorCode =
+  | "RPC_NOT_CONFIGURED"
+  | "RPC_NOT_DEVNET"
+  | "RPC_UNAVAILABLE"
+  | "FEE_PAYER_UNFUNDED"
+  | "ACCOUNT_NOT_FOUND"
+  | "PROGRAM_NOT_FOUND"
+  | "LOOKUP_TABLE_INVALID"
+  | "INSTRUCTION_FAILED"
+  | "COMPUTE_BUDGET_EXCEEDED"
+  | "INSUFFICIENT_FUNDS_FOR_RENT"
+  | "SIMULATION_FAILED";
+
+export interface SimulationError {
+  code: SimulationErrorCode;
+  /** Plain English, safe to show. */
+  userMessage: string;
+  /** The raw error as returned by the RPC (JSON text, capped), for Raw details. */
+  raw?: string;
+  instructionIndex?: number;
+  programId?: string;
+}
+
+export interface SimulationResult {
+  /** False when the simulation could not be attempted (no RPC, RPC down, not devnet). */
+  ran: boolean;
+  /** True when it ran and the transaction would succeed. */
+  ok: boolean;
+  error?: SimulationError;
+  /** Network fee reported by the RPC for this transaction, lamports. */
+  feeLamports?: string;
+  unitsConsumed?: number;
+  /** First 50 log lines, each capped. Untrusted program output. */
+  logs: string[];
+  logsTruncated: boolean;
+  innerInstructions: DecodedIx[];
+  changes: StateChange[];
+  watched: WatchedAccount[];
+  /** Accounts the transaction writes to that were left out of the comparison (cap). */
+  notWatched: string[];
+  slots?: { preState?: string; simulation?: string };
+  /** Which configured endpoint answered. URLs are never exposed. */
+  rpcEndpoint?: "primary" | "fallback";
+}
+
 export interface ApiError {
   error: { code: string; message: string };
 }
 
-/** M1 subset of AnalyzeResponse; simulation, verdict and explanation follow in M2-M5. */
+/** Verdict (M3) and explanation (M5) are added later. */
 export interface AnalyzeResponse {
   requestId: string;
   cluster: "devnet";
   decoded: DecodedTx;
+  simulation: SimulationResult;
   timingsMs: Record<string, number>;
 }

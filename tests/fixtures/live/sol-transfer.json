@@ -1,0 +1,184 @@
+{
+  "case": "sol-transfer",
+  "description": "0.01 SOL from an existing funded devnet wallet to a fresh address",
+  "source": "live devnet RPC, recorded by scripts/live-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T19:06:18.188Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAED+KUSPEk4OZkxSz3bPISrf0upK28mF0hC/shDccRhNaBi52xiFHHo7LCrb6TvuPleehQA1Dp0Mol9vSnBTpGYbQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzEkOkozS44c7s0P8ldozF5ymD02/RsLDbpEpnVXU5rkBAgIAAQwCAAAAgJaYAAAAAAA=",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "11"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+          "7f5dL9xWdGB8oLjT7Bkv71MwgaMWQUYGpV8EgdsQgvfN"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519398711"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "506657270258"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            },
+            null
+          ]
+        },
+        "id": "12"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAED+KUSPEk4OZkxSz3bPISrf0upK28mF0hC/shDccRhNaBi52xiFHHo7LCrb6TvuPleehQA1Dp0Mol9vSnBTpGYbQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzEkOkozS44c7s0P8ldozF5ymD02/RsLDbpEpnVXU5rkBAgIAAQwCAAAAgJaYAAAAAAA=",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+              "7f5dL9xWdGB8oLjT7Bkv71MwgaMWQUYGpV8EgdsQgvfN"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.1",
+            "slot": {
+              "$bigint": "519398713"
+            }
+          },
+          "value": {
+            "accounts": [
+              {
+                "data": [
+                  "",
+                  "base64"
+                ],
+                "executable": false,
+                "lamports": {
+                  "$bigint": "506647265258"
+                },
+                "owner": "11111111111111111111111111111111",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "0"
+                }
+              },
+              {
+                "data": [
+                  "",
+                  "base64"
+                ],
+                "executable": false,
+                "lamports": {
+                  "$bigint": "10000000"
+                },
+                "owner": "11111111111111111111111111111111",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "0"
+                }
+              }
+            ],
+            "err": null,
+            "fee": {
+              "$bigint": "5000"
+            },
+            "innerInstructions": [],
+            "loadedAccountsDataSize": {
+              "$bigint": "142"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [
+              "Program 11111111111111111111111111111111 invoke [1]",
+              "Program 11111111111111111111111111111111 success"
+            ],
+            "postBalances": [
+              {
+                "$bigint": "506647265258"
+              },
+              {
+                "$bigint": "10000000"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "postTokenBalances": [],
+            "preBalances": [
+              {
+                "$bigint": "506657270258"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "preTokenBalances": [],
+            "replacementBlockhash": {
+              "blockhash": "14fDsZRNrFH2BSeCxf7KbnoSeLZYJFkPKMqxoAb5sp2e",
+              "lastValidBlockHeight": {
+                "$bigint": "506550437"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "150"
+            }
+          }
+        },
+        "id": "13"
+      }
+    }
+  ]
+}

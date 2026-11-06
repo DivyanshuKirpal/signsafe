@@ -1,14 +1,15 @@
 /**
  * POST /api/analyze
  *
- * M1: validates the request and decodes the transaction. Simulation (M2),
- * rules and verdict (M3) and the AI explanation (M5) are added to this same
- * pipeline later.
+ * Decodes the transaction and simulates it on devnet (M2). Rules and verdict
+ * (M3) and the AI explanation (M5) are added to the same pipeline later.
  */
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
+import { analyzeTransaction } from "@/app/lib/analyze";
 import { LIMITS } from "@/app/lib/config";
-import { DecodeError, decodeTransaction } from "@/app/lib/solana/decode";
+import { DecodeError } from "@/app/lib/solana/decode";
+import { redactSecrets, rpcFromEnv, type SignSafeRpc } from "@/app/lib/solana/rpc";
 import type { AnalyzeResponse } from "@/app/lib/types";
 import { toJsonSafe } from "@/app/lib/util/bigint-json";
 import { inputTag, jsonError } from "@/app/lib/util/errors";
@@ -31,8 +32,14 @@ const RequestSchema = z.object({
   ]),
 });
 
+// One RPC client per server process, so the devnet check is cached.
+let cachedRpc: SignSafeRpc | null | undefined;
+function getRpc(): SignSafeRpc | null {
+  if (cachedRpc === undefined) cachedRpc = rpcFromEnv();
+  return cachedRpc;
+}
+
 export async function POST(request: Request): Promise<Response> {
-  const started = performance.now();
   const requestId = crypto.randomUUID();
 
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
@@ -61,22 +68,17 @@ export async function POST(request: Request): Promise<Response> {
   const { tx } = parsed.data.input;
 
   try {
-    const decodeStart = performance.now();
-    const decoded = await decodeTransaction(tx);
-    const decodeMs = Math.round(performance.now() - decodeStart);
-
-    const response: AnalyzeResponse = {
-      requestId,
-      cluster: "devnet",
-      decoded,
-      timingsMs: { decode: decodeMs, total: Math.round(performance.now() - started) },
-    };
+    const analysis = await analyzeTransaction(tx, {
+      rpc: getRpc(),
+      log: (message) => console.warn(`[analyze ${requestId}] input ${inputTag(tx)}: ${message}`),
+    });
+    const response: AnalyzeResponse = { requestId, ...analysis };
     return Response.json(toJsonSafe(response));
   } catch (error) {
     if (error instanceof DecodeError) {
       return jsonError(400, error.code, error.message);
     }
-    const reason = error instanceof Error ? error.message : "unknown error";
+    const reason = redactSecrets(error instanceof Error ? error.message : "unknown error");
     console.error(`[analyze ${requestId}] unexpected failure for input ${inputTag(tx)}: ${reason}`);
     return jsonError(500, "INTERNAL", "Something went wrong while checking this transaction. Please try again.");
   }

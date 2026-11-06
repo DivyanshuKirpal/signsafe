@@ -73,7 +73,9 @@ function describeSystem(ix: IxFacts): string | undefined {
 }
 
 function describeToken(ix: IxFacts): string | undefined {
-  const { accounts: a, args } = ix;
+  const { accounts: a } = ix;
+  // Plain Transfer/Approve carry no decimals; use the ones looked up from the token account (M2).
+  const args: Record<string, ArgValue> = { ...ix.args, decimals: ix.args.decimals ?? ix.token?.decimals ?? null };
   switch (ix.action) {
     case "transfer":
       return `Move ${tokens(args.amount)} from token account ${addr(a.source)} to ${addr(a.destination)}.`;

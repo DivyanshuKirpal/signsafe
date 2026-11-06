@@ -21,4 +21,11 @@ export const LIMITS = {
   maxMemoChars: 300,
   /** Any other untrusted or decoded text value shown in the UI. */
   maxArgChars: 200,
+  /** Accounts compared before/after simulation (ARCHITECTURE 9.3 starts at 40). */
+  maxWatchedAccounts: 40,
+  /** getMultipleAccounts accepts at most 100 addresses per call. */
+  accountsPerRequest: 100,
+  /** Simulation logs are untrusted program output: keep the first lines only, capped. */
+  maxLogLines: 50,
+  maxLogLineChars: 200,
 } as const;

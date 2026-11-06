@@ -44,3 +44,7 @@ keys/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Throwaway local scripts (never committed)
+*-tmp.mts
+*-tmp.ts

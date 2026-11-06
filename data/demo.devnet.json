@@ -1,0 +1,12 @@
+{
+  "cluster": "devnet",
+  "authority": "7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3",
+  "victim": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+  "attacker": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+  "friend": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+  "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+  "decimals": 6,
+  "victimTokenAccount": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+  "unknownProgram": "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV",
+  "updatedAt": "2026-11-06T21:28:27.938Z"
+}

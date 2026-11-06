@@ -14,6 +14,11 @@ Decode -> Simulate (devnet) -> State diff -> Risk rules -> Verdict -> AI explana
 
 Fixed, unit-tested rules decide the risk level. The AI model only explains the result and cannot change it. If the AI is unavailable, a built-in explanation is used.
 
+### What works so far
+
+- **Decoding:** paste a base64 transaction (signed or unsigned; legacy, v0 or v1). SignSafe lists the fee payer, signers, compute budget, durable-nonce use and every instruction with a plain-English sentence, for example "Send 0.01 SOL from 9xQe...VFin to 4Nd1...DB4T." or "Allow HN7c...YWrH to spend UNLIMITED (u64 max) from token account 2wmV...dri9." Known programs (System, SPL Token, Token-2022, Associated Token Account, Compute Budget, Memo, Address Lookup Table) are decoded with the official program clients; anything else is labelled "Unknown program". Memo text is treated as untrusted.
+- Simulation, risk rules, the verdict and the AI explanation are being built.
+
 ## Setup
 
 Requirements: Node.js 24 or newer, npm.
@@ -36,6 +41,7 @@ npm run dev                      # http://localhost:3000
 | `npm run setup:demo` | (planned) creates devnet demo accounts |
 | `npm run scenarios:check` | (planned) runs every demo scenario and compares verdicts |
 | `npm run fixtures:save` | (planned) saves scenario results for offline replay |
+| `npm run samples:print` | prints two example transactions (a normal payment and an unlimited token approval) to paste into the app |
 
 ## Security notes
 
@@ -45,10 +51,10 @@ npm run dev                      # http://localhost:3000
 
 ## Credits
 
-- Scaffolded from the official Solana `kit/nextjs` template (solana-foundation/templates, via `create-solana-dapp`). The template's demo pages were removed.
+- Scaffolded from the official Solana `kit/nextjs` template (solana-foundation/templates, via `create-solana-dapp`), MIT licensed; its copyright and permission notice are included in `LICENSE`. The template's demo pages were removed.
 - Libraries: Next.js, React, Tailwind CSS, `@solana/kit`, `@solana-program/*` clients, zod, vitest, tsx.
 - Built with help from Claude Code.
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See `LICENSE`, which also contains the license of the Solana template this project started from.

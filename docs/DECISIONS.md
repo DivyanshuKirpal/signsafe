@@ -1,0 +1,15 @@
+# Decisions log
+
+Small reversible choices and deviations from `ARCHITECTURE.md`. Newest at the bottom. Times are IST.
+
+| Time | Decision | Reason | Alternatives considered |
+|---|---|---|---|
+| Fri 6 Nov 23:15 | Scaffold the official `kit/nextjs` template (create-solana-dapp 4.8.5, `gh:solana-foundation/templates/kit/nextjs`) into a sibling temp folder, then copy into the root. | User choice. Never touches `CLAUDE.md` / `ARCHITECTURE.md`; scaffolders refuse non-empty folders (R2). | Move docs out and scaffold in place; create-next-app + manual Kit setup. |
+| Fri 6 Nov 23:15 | Package manager: **npm** for the whole project. Removed the template's `pnpm-workspace.yaml`. | User choice. npm 11 is installed; template scripts already call `npm run`. | pnpm via corepack. |
+| Fri 6 Nov 23:15 | Demo authority funding (M4): **option A**, user sends about 1 devnet SOL from Phantom to the printed demo-authority address. | User choice. Most reliable; faucets are rate-limited. | B faucet.solana.com; C script airdrop. |
+| Fri 6 Nov 23:15 | License: **MIT**. | User choice. | Apache-2.0; none. |
+| Fri 6 Nov 23:20 | Node **v24.22.2** is used (CLAUDE.md section 2 says Node 22). | The official template requires `node >=24` (`engines`). No action needed; CLAUDE.md left unchanged as instructed. | Install Node 22 (would break the template's engine requirement). |
+| Fri 6 Nov 23:20 | Follow the template layout: `app/` at the repo root, not `src/app/`. Library code goes in `app/lib/...` mirroring ARCHITECTURE section 6 (`app/lib/solana`, `app/lib/risk`, `app/lib/ai`, ...). Tests stay in `tests/`. | ARCHITECTURE section 6 says follow the template if it puts `app/` at the root. | Move to `src/`. |
+| Fri 6 Nov 23:22 | Added `@solana-program/token-2022@^0.20.1`, `@solana-program/compute-budget@^0.20.0`, `zod@^4.6.7`, dev `tsx@^4.23.15`. Kept template versions (`@solana/kit` 8.6.0 installed, `@solana-program/token` 0.17.0, `system` 0.14.1, `memo` 0.15.0). | Needed for decoding (ARCHITECTURE section 5). Both program clients peer-depend on `@solana/kit ^8.5.0`; one deduped kit copy. `@solana/zk-sdk` is an optional peer and is not installed. | Hand-written discriminator decoding only. |
+| Fri 6 Nov 23:25 | The template's only test (`tests/app.test.tsx`) cannot run on Windows: it starts Surfpool, which ships no `win32-x64` binary. It tests the template's demo action cards, which ARCHITECTURE section 5 says to remove. Remove the cards, that test, `tests/mock-wallet.ts` and the `@solana/surfpool` dev dependency. | Every file must be explainable; tests must run on this machine. Our decoder tests build transactions offline with Kit (ARCHITECTURE section 13), so no local validator is needed. | Run tests in WSL/Docker; keep the test and skip it on Windows. |
+| Fri 6 Nov 23:30 | `scan:secrets` matches a full PEM header (`-----BEGIN <LABEL>-----`), not the bare marker. | CLAUDE.md says rule text in the docs is not a finding, and CLAUDE.md quotes the bare marker. Real PEM blocks always have a label. | Exclude CLAUDE.md from the scan (would miss a real key pasted there). |

@@ -50,6 +50,7 @@ export function formatTokenAmount(raw: bigint, decimals?: number): string {
 
 /** "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin" -> "9xQe...VFin". */
 export function shortAddress(address: string): string {
-  if (address.length <= 12) return address;
+  // Unresolved lookup-table placeholders ("?lookup:...") are already short.
+  if (address.length <= 12 || address.startsWith("?")) return address;
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }

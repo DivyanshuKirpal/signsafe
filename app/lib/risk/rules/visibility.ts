@@ -3,7 +3,7 @@
  * R-UNKNOWN-PROGRAM, R-DURABLE-NONCE (Should), R-SIM-FAILED, R-UNRESOLVED,
  * R-MEMO (info).
  */
-import { ixSource, type RawFlag, type RiskContext, short } from "../context";
+import { ixSource, type RawFlag, type RiskContext, short, UNRESOLVED_DETAIL, UNRESOLVED_TITLE } from "../context";
 
 /** Unknown programs are CAUTION; their effects are judged only through the state-diff rules. */
 export function unknownProgramRule(ctx: RiskContext): RawFlag[] {
@@ -76,9 +76,9 @@ export function unresolvedRule(ctx: RiskContext): RawFlag[] {
       key: "unresolved",
       ruleId: "R-UNRESOLVED",
       severity: "caution",
-      title: "Part of this transaction could not be read",
-      detail: `SignSafe could not see all of this transaction (${warnings.length} problem${warnings.length === 1 ? "" : "s"} listed below), so some effects may be hidden.`,
-      evidence: { problems: String(warnings.length) },
+      title: UNRESOLVED_TITLE,
+      detail: UNRESOLVED_DETAIL,
+      evidence: {},
       sources: warnings.map((w) => ({ type: "decodeWarning" as const, code: w.code, message: w.message })),
     },
   ];

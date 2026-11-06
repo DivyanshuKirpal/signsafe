@@ -16,7 +16,7 @@
  * v1: the total priority fee from the message config.
  */
 import type { DecodedTx } from "../../types";
-import { atLeastPct, big, changeSource, floorPct, isTokenIx, ixSource, programKey, type RawFlag, type RiskContext, short, solText, tokenText } from "../context";
+import { atLeastPct, big, changeSource, floorPct, isTokenIx, ixSource, missingState, programKey, type RawFlag, type RiskContext, short, solText, tokenText } from "../context";
 
 export function outflowRule(ctx: RiskContext): RawFlag[] {
   const { outflowDangerPct, outflowCautionPct, outflowDustLamports } = ctx.thresholds;
@@ -66,8 +66,12 @@ export function closeAccountRule(ctx: RiskContext): RawFlag[] {
     if (!isTokenIx(ix) || ix.action !== "closeAccount") continue;
     const account = ix.accounts.account;
     const destination = ix.accounts.destination;
-    const owner = (account && ctx.pre.get(account)?.token?.owner) ?? ix.accounts.owner;
-    if (!account || !destination || !owner || destination === owner) continue;
+    if (!account || !destination) continue;
+    const preOwner = ctx.pre.get(account)?.token?.owner;
+    if (!preOwner) flags.push(missingState(account, "owner"));
+    // Fallback to the instruction's owner (the runtime requires that owner's signature).
+    const owner = preOwner ?? ix.accounts.owner;
+    if (!owner || destination === owner) continue;
     flags.push({
       key: `close:${account}`,
       ruleId: "R-CLOSE-ACCOUNT",

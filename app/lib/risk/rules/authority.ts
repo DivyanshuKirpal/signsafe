@@ -10,7 +10,7 @@
  * System Program (a normal wallet) getting a new owning program is DANGER.
  * Accounts created in the same transaction are normal and do not fire.
  */
-import { changeSource, isSystemIx, isTokenIx, ixSource, type RawFlag, type RiskContext, short, SYSTEM_PROGRAM } from "../context";
+import { changeSource, isSystemIx, isTokenIx, ixSource, missingState, type RawFlag, type RiskContext, short, SYSTEM_PROGRAM } from "../context";
 import { lookupProgram } from "../../solana/programs";
 
 function ownerTakeover(account: string, newOwner: string, ruleSource: RawFlag["sources"][number]): RawFlag {
@@ -49,8 +49,11 @@ export function setAuthorityRule(ctx: RiskContext): RawFlag[] {
     if (!account) continue;
 
     if (type === "AccountOwner" || type === "CloseAccount") {
-      const owner = ctx.pre.get(account)?.token?.owner ?? ix.accounts.owner;
+      const preOwner = ctx.pre.get(account)?.token?.owner;
+      if (!preOwner) flags.push(missingState(account, "owner"));
       // Removing the close authority hands it back to the owner; same owner is no change.
+      // Fallback to the instruction's owner (the runtime requires that owner's signature).
+      const owner = preOwner ?? ix.accounts.owner;
       if (newAuthority === null || newAuthority === owner) continue;
       flags.push(type === "AccountOwner" ? ownerTakeover(account, newAuthority, ixSource(ix)) : closeAuthorityChange(account, newAuthority, ixSource(ix)));
       continue;
@@ -117,6 +120,7 @@ export function assignRule(ctx: RiskContext): RawFlag[] {
       flags.push(flag(account, program, ixSource(ix), true));
     } else if (!createdHere.has(account)) {
       flags.push(flag(account, program, ixSource(ix), false));
+      flags.push(missingState(account, "owning program"));
     }
   }
 

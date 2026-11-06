@@ -63,7 +63,7 @@ describe("R-APPROVE", () => {
     ["499", "1000", "caution"], // just below
     ["501", "1001", "danger"], // 50.05%
     ["500", "1001", "caution"], // 49.95%
-    ["1", "0", "danger"], // empty account: covers future deposits
+    ["1", "0", "caution"], // known empty account, finite allowance (see the M4 block below)
   ])("allowance %s of balance %s -> %s", (amount, balance, severity) => {
     const [flag] = approveRule(ctxOf({ instructions: [approveIx(amount)], pre: [victimTokens(balance)] }));
     expect(flag.severity).toBe(severity);
@@ -83,8 +83,11 @@ describe("R-APPROVE", () => {
     expect(approveRule(asCoSigner)).toMatchObject([{ severity: "danger" }]);
   });
 
-  test("without pre-state: unlimited is DANGER, a limited amount is CAUTION (balance unknown)", () => {
-    expect(approveRule(ctxOf({ instructions: [approveIx(U64_MAX_TEXT)] }))).toMatchObject([{ severity: "danger" }]);
+  test("without pre-state: unlimited is DANGER, a limited amount is CAUTION, and both report the missing state", () => {
+    expect(approveRule(ctxOf({ instructions: [approveIx(U64_MAX_TEXT)] })).map((f) => [f.ruleId, f.severity])).toEqual([
+      ["R-APPROVE", "danger"],
+      ["R-UNRESOLVED", "caution"],
+    ]);
     const [limited] = approveRule(ctxOf({ instructions: [approveIx("5")] }));
     expect(limited.severity).toBe("caution");
     expect(limited.detail).toContain("could not be checked");
@@ -180,7 +183,10 @@ describe("R-ASSIGN", () => {
   });
 
   test("without pre-state, an account not created here is still DANGER", () => {
-    expect(assignRule(ctxOf({ instructions: [assign(VICTIM, ATTACKER)] }))).toMatchObject([{ severity: "danger", evidence: { existedBefore: "not checked" } }]);
+    expect(assignRule(ctxOf({ instructions: [assign(VICTIM, ATTACKER)] }))).toMatchObject([
+      { ruleId: "R-ASSIGN", severity: "danger", evidence: { existedBefore: "not checked" } },
+      { ruleId: "R-UNRESOLVED", sources: [{ type: "missingState", address: VICTIM }] },
+    ]);
   });
 
   test("negative: new accounts, assign to System, already program-owned", () => {
@@ -313,5 +319,78 @@ describe("Should and info rules", () => {
     expect(flags).toMatchObject([{ ruleId: "R-MEMO", severity: "info" }]);
     expect(decideVerdict(flags).level).toBe("LOW_RISK");
     expect(memoRule(ctxOf({}))).toEqual([]);
+  });
+});
+
+/**
+ * M4 decision (user, 7 Nov): known empty accounts and missing account data.
+ * - known empty + external delegate: unlimited -> DANGER, finite positive -> CAUTION with the exact allowance
+ * - zero allowance alone never triggers anything
+ * - missing account data -> the check is incomplete (R-UNRESOLVED), independent DANGER is kept
+ */
+describe("empty balance and missing account data (M4 decision)", () => {
+  const empty = () => victimTokens("0");
+  const verdictOf = (input: Parameters<typeof ctxOf>[0]) => decideVerdict(runRules(ctxOf(input)));
+
+  test("known empty account: unlimited is DANGER, finite positive is CAUTION with the exact allowance", () => {
+    expect(approveRule(ctxOf({ instructions: [approveIx(U64_MAX_TEXT)], pre: [empty()] }))).toMatchObject([
+      { severity: "danger", detail: expect.stringContaining("empty now, so this covers any tokens that arrive later, without limit") },
+    ]);
+    const [finite] = approveRule(ctxOf({ instructions: [approveIx("5000000", { decimals: 6 })], pre: [empty()] }));
+    expect(finite).toMatchObject({ severity: "caution", evidence: { allowance: "5 tokens", allowanceRaw: "5000000", balanceBefore: "0 tokens" } });
+    expect(finite.detail).toContain("covers up to exactly 5 tokens of tokens that arrive later");
+    const [tiny] = approveRule(ctxOf({ instructions: [approveIx("1")], pre: [empty()] }));
+    expect(tiny).toMatchObject({ severity: "caution", evidence: { allowanceRaw: "1", allowance: "0.000001 tokens" } });
+    expect(verdictOf({ instructions: [approveIx("1")], pre: [empty()] })).toMatchObject({ level: "CAUTION", complete: true });
+  });
+
+  test("the same holds when the approval is seen only in account state", () => {
+    expect(approveRule(ctxOf({ changes: [delegateChange(ATTACKER, U64_MAX_TEXT)], pre: [empty()] }))).toMatchObject([{ severity: "danger" }]);
+    expect(approveRule(ctxOf({ changes: [delegateChange(ATTACKER, "250")], pre: [empty()] }))).toMatchObject([
+      { ruleId: "R-DELEGATE-STATE", severity: "caution", evidence: { allowanceRaw: "250" } },
+    ]);
+  });
+
+  test("zero allowance alone triggers nothing (instruction or state, empty or not)", () => {
+    for (const pre of [[empty()], [victimTokens("1000")], []]) {
+      expect(runRules(ctxOf({ instructions: [approveIx("0")], pre })).filter((f) => f.severity === "danger")).toEqual([]);
+      expect(approveRule(ctxOf({ instructions: [approveIx("0")], pre }))).toEqual([]);
+    }
+    expect(approveRule(ctxOf({ changes: [delegateChange(ATTACKER, "0")], pre: [empty()] }))).toEqual([]);
+  });
+
+  test("missing account data: finite approval -> Could not fully check (not Caution on a guess)", () => {
+    const flags = runRules(ctxOf({ instructions: [approveIx("5")] }));
+    expect(flags.map((f) => `${f.severity}:${f.ruleId}`)).toEqual(["caution:R-APPROVE", "caution:R-UNRESOLVED"]);
+    expect(flags[1].sources).toEqual([
+      { type: "missingState", address: TOKEN_ACCOUNT, message: "The owner and token balance of 2wmV...dri9 before the transaction could not be read." },
+    ]);
+    expect(decideVerdict(flags)).toMatchObject({ level: "UNKNOWN", complete: false });
+  });
+
+  test("missing account data: an unlimited approval stays DANGER, marked incomplete", () => {
+    expect(verdictOf({ instructions: [approveIx(U64_MAX_TEXT)] })).toMatchObject({ level: "DANGER", complete: false });
+  });
+
+  test("missing data for one account does not hide independent DANGER elsewhere", () => {
+    const assign = ix(SYSTEM, "assign", { account: VICTIM }, { programAddress: ATTACKER });
+    const verdict = verdictOf({ instructions: [assign, approveIx("5")], pre: [walletState(VICTIM, "50000000")] });
+    expect(verdict).toMatchObject({ level: "DANGER", complete: false });
+    expect(verdict.flags.map((f) => f.ruleId)).toEqual(["R-ASSIGN", "R-APPROVE", "R-UNRESOLVED"]);
+  });
+
+  test("without state, the instruction's owner is only a fallback and the check is always incomplete", () => {
+    // The runtime requires the real owner's signature, so a matching claim means no change, but it is unverified.
+    const selfApprove = runRules(ctxOf({ instructions: [approveIx(U64_MAX_TEXT, { delegate: ATTACKER, owner: ATTACKER })] }));
+    expect(selfApprove.map((f) => f.ruleId)).toEqual(["R-UNRESOLVED"]);
+    expect(decideVerdict(selfApprove)).toMatchObject({ level: "UNKNOWN", complete: false });
+    const setAuth = (newAuthority: string) =>
+      ix(TOKEN, "setAuthority", { owned: TOKEN_ACCOUNT, owner: VICTIM }, { authorityType: "AccountOwner", newAuthority });
+    expect(verdictOf({ instructions: [setAuth(VICTIM)] })).toMatchObject({ level: "UNKNOWN", complete: false });
+    expect(verdictOf({ instructions: [setAuth(ATTACKER)] })).toMatchObject({ level: "DANGER", complete: false });
+    const close = (destination: string) => ix(TOKEN, "closeAccount", { account: TOKEN_ACCOUNT, destination, owner: VICTIM });
+    expect(verdictOf({ instructions: [close(VICTIM)] }).flags.map((f) => f.ruleId)).toEqual(["R-UNRESOLVED"]);
+    expect(verdictOf({ instructions: [close(ATTACKER)] })).toMatchObject({ level: "UNKNOWN", complete: false });
+    expect(verdictOf({ instructions: [close(ATTACKER)] }).flags.map((f) => f.ruleId)).toEqual(["R-CLOSE-ACCOUNT", "R-UNRESOLVED"]);
   });
 });

@@ -252,7 +252,9 @@ export type FlagSource =
   | { type: "decodeWarning"; code: DecodeWarningCode; message: string }
   | { type: "simulation"; code: SimulationErrorCode | "OK"; message: string }
   /** A transaction-level setting that is not an instruction (for example the v1 fee config). */
-  | { type: "transaction"; description: string };
+  | { type: "transaction"; description: string }
+  /** An account whose state before the transaction was needed but could not be read. */
+  | { type: "missingState"; address: string; message: string };
 
 export interface RiskFlag {
   /** The main rule. When evidence from several rules was merged, the others are in relatedRuleIds. */

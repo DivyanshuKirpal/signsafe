@@ -6,13 +6,26 @@
  * transaction; the instruction's own "owner" field is only a fallback when the
  * state could not be fetched.
  *
- * Severity: DANGER if the allowance is unlimited (u64 max) or at least
- * approveDangerPct of the balance; otherwise CAUTION. Both rules use the same
- * key per token account, so the engine merges them into one flag.
+ * Severity: see approvalSeverity. Both rules use the same key per token
+ * account, so the engine merges them into one flag. A zero allowance never
+ * fires. When the token account's state before the transaction is missing,
+ * the check is reported as incomplete (missingState -> R-UNRESOLVED).
  */
 import { U64_MAX } from "../../config";
 import type { FlagSource, Severity } from "../../types";
-import { atLeastPct, big, changeSource, floorPct, isTokenIx, ixSource, type RawFlag, type RiskContext, short, tokenText } from "../context";
+import {
+  atLeastPct,
+  big,
+  changeSource,
+  floorPct,
+  isTokenIx,
+  ixSource,
+  missingState,
+  type RawFlag,
+  type RiskContext,
+  short,
+  tokenText,
+} from "../context";
 
 interface Approval {
   account: string;
@@ -23,22 +36,33 @@ interface Approval {
   decimals: number | undefined;
 }
 
-function severityOf(a: Approval, dangerPct: bigint): Severity {
-  if (a.allowance === U64_MAX) return "danger";
-  if (a.balance === undefined) return "caution";
-  return atLeastPct(a.allowance, a.balance, dangerPct) ? "danger" : "caution";
+/**
+ * Unlimited: DANGER, whatever the balance.
+ * Known empty account (balance 0): a finite allowance is CAUTION; it covers
+ * only tokens that arrive later, up to the exact amount shown.
+ * Unknown balance: CAUTION here, and the rule also reports the missing state
+ * (R-UNRESOLVED), so the verdict cannot fall to "Caution" on a guess.
+ * Otherwise: DANGER at >= approveDangerPct of the balance, else CAUTION.
+ */
+export function approvalSeverity(allowance: bigint, balance: bigint | undefined, dangerPct: bigint): Severity {
+  if (allowance === U64_MAX) return "danger";
+  if (balance === undefined || balance === 0n) return "caution";
+  return atLeastPct(allowance, balance, dangerPct) ? "danger" : "caution";
 }
 
 function flagFor(ruleId: "R-APPROVE" | "R-DELEGATE-STATE", a: Approval, source: FlagSource, ctx: RiskContext): RawFlag {
-  const severity = severityOf(a, ctx.thresholds.approveDangerPct);
+  const severity = approvalSeverity(a.allowance, a.balance, ctx.thresholds.approveDangerPct);
   const unlimited = a.allowance === U64_MAX;
   const amount = tokenText(a.allowance, a.decimals);
   const owner = a.owner ? short(a.owner) : "its owner";
 
   let share = "";
-  if (a.balance === undefined) share = " The current balance could not be checked.";
-  else if (a.balance === 0n) share = " The account is empty now, so this covers tokens that arrive later.";
-  else if (!unlimited) share = ` That is ${floorPct(a.allowance, a.balance)} of its current balance of ${tokenText(a.balance, a.decimals)}.`;
+  if (a.balance === undefined) share = " Its balance before the transaction could not be checked.";
+  else if (a.balance === 0n) {
+    share = unlimited
+      ? " The account is empty now, so this covers any tokens that arrive later, without limit."
+      : ` The account is empty now, so this covers up to exactly ${amount} of tokens that arrive later.`;
+  } else if (!unlimited) share = ` That is ${floorPct(a.allowance, a.balance)} of its current balance of ${tokenText(a.balance, a.decimals)}.`;
 
   const title = unlimited
     ? "Unlimited permission to spend tokens from a token account"
@@ -50,6 +74,8 @@ function flagFor(ruleId: "R-APPROVE" | "R-DELEGATE-STATE", a: Approval, source: 
     tokenAccount: a.account,
     delegate: a.delegate,
     allowance: amount,
+    // The exact integer the permission is for, before any decimal formatting.
+    allowanceRaw: a.allowance.toString(),
   };
   if (a.owner) evidence.owner = a.owner;
   if (a.balance !== undefined) evidence.balanceBefore = tokenText(a.balance, a.decimals);
@@ -79,11 +105,18 @@ export function approveRule(ctx: RiskContext): RawFlag[] {
     const allowance = big(ix.args.amount);
     if (!account || !delegate || allowance === undefined || allowance === 0n) continue;
     const pre = ctx.pre.get(account)?.token;
+    // Missing state makes the check incomplete. The instruction's owner is then the fallback:
+    // the runtime only accepts an Approve signed by the real owner, so a false claim cannot land.
+    const gap = pre ? [] : [missingState(account, "owner and token balance")];
     const owner = pre?.owner ?? ix.accounts.owner;
-    if (delegate === owner) continue;
+    if (delegate === owner) {
+      flags.push(...gap);
+      continue;
+    }
     const decimals = pre?.decimals ?? (typeof ix.args.decimals === "number" ? ix.args.decimals : ix.token?.decimals);
     flags.push(
       flagFor("R-APPROVE", { account, delegate, owner, allowance, balance: big(pre?.amount), decimals }, ixSource(ix), ctx),
+      ...gap,
     );
   }
 

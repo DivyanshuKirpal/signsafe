@@ -96,6 +96,29 @@ export function changeSource(change: StateChange): FlagSource {
   };
 }
 
+/** Shared wording of R-UNRESOLVED, so flags from different rules merge cleanly. */
+export const UNRESOLVED_TITLE = "Part of this transaction could not be checked";
+export const UNRESOLVED_DETAIL =
+  "SignSafe could not see everything this transaction does or touches, so some effects may be hidden. The gaps are listed below.";
+
+/**
+ * A rule needed an account's state before the transaction (its real owner or
+ * balance) and it was not available. The check is then incomplete: this adds
+ * to the single R-UNRESOLVED flag, which makes the verdict "Could not fully
+ * check" unless something else is already Danger.
+ */
+export function missingState(address: string, what: string): RawFlag {
+  return {
+    key: "unresolved",
+    ruleId: "R-UNRESOLVED",
+    severity: "caution",
+    title: UNRESOLVED_TITLE,
+    detail: UNRESOLVED_DETAIL,
+    evidence: {},
+    sources: [{ type: "missingState", address, message: `The ${what} of ${shortAddress(address)} before the transaction could not be read.` }],
+  };
+}
+
 export function tokenText(raw: bigint, decimals?: number): string {
   return formatTokenAmount(raw, decimals);
 }

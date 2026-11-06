@@ -63,10 +63,11 @@ export function mergeFlags(raw: readonly RawFlag[]): RiskFlag[] {
       sources,
     });
   }
-  // Most severe first; otherwise keep rule order.
+  // Most severe first; within a severity, problems found before gaps in the check; otherwise rule order.
+  const gap = (f: RawFlag) => (INCOMPLETE_RULES.has(f.ruleId) ? 1 : 0);
   return [...merged.values()]
     .map((flag, index) => ({ flag, index }))
-    .sort((a, b) => RANK[b.flag.severity] - RANK[a.flag.severity] || a.index - b.index)
+    .sort((a, b) => RANK[b.flag.severity] - RANK[a.flag.severity] || gap(a.flag) - gap(b.flag) || a.index - b.index)
     .map(({ flag }) => {
       const { key: _key, ...rest } = flag;
       void _key;

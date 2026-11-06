@@ -41,6 +41,12 @@ function SourceItem({ source }: { source: FlagSource }) {
           <span className="font-semibold">Transaction setting:</span> {source.description}
         </>
       );
+    case "missingState":
+      return (
+        <>
+          <span className="font-semibold">Not checked:</span> {source.message}
+        </>
+      );
   }
 }
 

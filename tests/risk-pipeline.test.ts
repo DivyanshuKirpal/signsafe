@@ -194,7 +194,8 @@ describe("incomplete checks (synthetic)", () => {
     expect(payment.verdict).toMatchObject({ level: "UNKNOWN", complete: false });
     const approval = await analyzeTransaction(loadFixture("token-approval").txBase64, { rpc: null });
     expect(approval.verdict).toMatchObject({ level: "DANGER", complete: false });
-    expect(flagSummary(approval.verdict)).toEqual(["danger:R-APPROVE", "info:R-SIM-FAILED"]);
+    // No state was fetched, so the missing owner/balance is reported too.
+    expect(flagSummary(approval.verdict)).toEqual(["danger:R-APPROVE", "caution:R-UNRESOLVED", "info:R-SIM-FAILED"]);
   });
 
   test("unresolved lookup table: payment -> Could not fully check; approval -> Danger, incomplete", async () => {

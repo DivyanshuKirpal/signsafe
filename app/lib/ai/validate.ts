@@ -86,9 +86,15 @@ const ENCOURAGE_DIRECT = /\b(go ahead|feel free|nothing to worry|no need to worr
 // Reassurance: rejected unless negated or contrasted ("the payment looks fine, but ...").
 const REASSURE = /\b(looks fine|looks good|looks legit\w*|looks normal|all good)\b/i;
 const CONTRAST = /\b(but|however|although|though|yet|while)\b/i;
-// Weak encouragement: rejected unless negated or conditional ("only sign if ...", "before you sign ...").
-const ENCOURAGE_WEAK = /\b(you can sign|you may sign|you should sign|sign it|sign this|approve it|proceed)\b/i;
-const CONDITIONAL = /\b(if|unless|until|only|before|after)\b/i;
+// Telling the user to sign: rejected unless negated or conditional ("only sign if ...", "before you sign ...").
+// Descriptive mentions ("no tokens move when you sign this approval") are not instructions and pass.
+const ENCOURAGE_WEAK = [
+  /\byou (can|may|should|could) (go on and |safely |now |just )?(sign|approve|proceed)\b/i,
+  /^\s*(please\s+|just\s+|so\s+)?(sign|approve|proceed)\b/i,
+  /\bproceed with (signing|it|the transaction|this transaction)\b/i,
+  /\bit(?:'s| is) (ok|okay|fine|reasonable|alright) to (sign|approve|proceed)\b/i,
+];
+const CONDITIONAL = /\b(if|unless|until|only|before|after|when|once)\b/i;
 const DOWNPLAY = /\b(harmless|low[- ]risk|no (known )?risks?|nothing (suspicious|dangerous|unusual|wrong)|not dangerous|benign|minor issue)\b/i;
 const RISK_CLAIM = /\b(danger(ous)?|scam\w*|drain(s|ed|er|ing)?|steal(s|ing)?|stolen|malicious|attacker|fraud\w*|phishing|takeover)\b/i;
 const ADVICE_CUE: Record<ExplanationMeta["level"], RegExp | null> = {
@@ -98,7 +104,16 @@ const ADVICE_CUE: Record<ExplanationMeta["level"], RegExp | null> = {
   LOW_RISK: null,
 };
 const HEDGE = /\b(could not|couldn't|cannot|can't|unable to|not be (checked|confirmed|verified|read|seen)|not (fully )?(checked|confirmed|verified|simulated)|unconfirmed|unverified|incomplete|did not run|failed)\b/i;
-const SIM_CONFIRMS = /\bsimulat\w*\b[^.]{0,60}\b(shows?|showed|confirms?|confirmed|proves?|proved)\b/i;
+const SIM_CONFIRMS = /\bsimulat\w*\b[^.]{0,60}\b(shows?|showed|confirms?|confirmed|proves?|proved)\b/gi;
+
+/** "The simulation confirms X" is a claim; "the simulation failed, so X could not be confirmed" is not. */
+function simulationClaimsConfirmation(sentence: string): boolean {
+  for (const m of sentence.matchAll(SIM_CONFIRMS)) {
+    const before = sentence.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
+    if (!NEGATION.test(before) && !NEGATION.test(m[0]) && !/\bfail/i.test(m[0])) return true;
+  }
+  return false;
+}
 
 const MOVE_VERB = /\b(transfer(s|red|ring)?|send(s|ing)?|sent|mov(e|es|ed|ing)|tak(e|es|en|ing)|took|drain(s|ed|ing)?|withdr(aw|aws|awn|ew)|steal(s|ing)?|stole|stolen|empt(y|ies|ied))\b/i;
 const MODAL = /\b(can|could|may|might|able to|allow(s|ed|ing)?|let(s)?|permission|permit(s|ted)?|approv\w*|delegat\w*|later|future|any ?time|at will|without asking)\b/i;
@@ -189,7 +204,7 @@ export function validateExplanation(raw: unknown, meta: ExplanationMeta): Valida
     if (sentenceList.some((s) => claims(s, REASSURE) && !CONTRAST.test(s))) {
       return reject("SIGNING_ADVICE", "reassures the user despite the verdict");
     }
-    if (sentenceList.some((s) => claims(s, ENCOURAGE_WEAK) && !CONDITIONAL.test(s))) {
+    if (sentenceList.some((s) => ENCOURAGE_WEAK.some((p) => claims(s, p)) && !CONDITIONAL.test(s))) {
       return reject("SIGNING_ADVICE", "tells the user to sign despite the verdict");
     }
     const cue = ADVICE_CUE[meta.level];
@@ -221,7 +236,7 @@ export function validateExplanation(raw: unknown, meta: ExplanationMeta): Valida
   if ((!meta.checkComplete || meta.simulationStatus !== "succeeded") && !HEDGE.test(text)) {
     return reject("UNVERIFIED_AS_CONFIRMED", "does not say that part of the check is missing");
   }
-  if (meta.simulationStatus !== "succeeded" && sentenceList.some((s) => claims(s, SIM_CONFIRMS))) {
+  if (meta.simulationStatus !== "succeeded" && sentenceList.some(simulationClaimsConfirmation)) {
     return reject("UNVERIFIED_AS_CONFIRMED", "claims the simulation confirmed effects although it did not succeed");
   }
 

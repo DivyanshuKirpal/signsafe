@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { AnalyzeResponse, ApiError } from "../lib/types";
 import { UserAddressContext } from "./address";
 import { CouldNotCheck } from "./could-not-check";
+import { ExplanationPanel } from "./explanation-panel";
 import { FlagList } from "./flag-list";
 import { InstructionList } from "./instruction-list";
 import { ScenarioButtons, ScenarioRevealCard, type ScenarioReveal, type ScenarioSummary } from "./scenario-buttons";
@@ -15,7 +16,7 @@ import { VerdictCard } from "./verdict-card";
 type State =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; result: AnalyzeResponse }
+  | { status: "success"; result: AnalyzeResponse; tx: string }
   | { status: "error"; message: string };
 
 const REQUEST_TIMEOUT_MS = 40_000;
@@ -36,8 +37,11 @@ export function Checker() {
   const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
-  /** The one analysis path: pasted text and demo scenarios both go through here. */
-  async function check(tx: string = input): Promise<boolean> {
+  /**
+   * The one analysis path: pasted text and demo scenarios both go through here.
+   * fresh = "Check again": the server skips its cached result and explanation.
+   */
+  async function check(tx: string = input, fresh = false): Promise<boolean> {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -49,6 +53,7 @@ export function Checker() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           input: { kind: "base64", tx, ...(userAddress.trim() ? { userAddress: userAddress.trim() } : {}) },
+          ...(fresh ? { fresh: true } : {}),
         }),
         signal: controller.signal,
       });
@@ -61,7 +66,7 @@ export function Checker() {
         });
         return false;
       }
-      setState({ status: "success", result: body as AnalyzeResponse });
+      setState({ status: "success", result: body as AnalyzeResponse, tx });
       return true;
     } catch {
       if (controllerRef.current !== controller) return false; // superseded by a newer check
@@ -133,7 +138,28 @@ export function Checker() {
       {state.status === "success" && (
         <UserAddressContext.Provider value={state.result.userAddress}>
           <div className="space-y-6">
-            <VerdictCard verdict={state.result.verdict} />
+            {/* The verdict (rules) and its explanation side by side on wide screens, stacked on phones. */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <VerdictCard verdict={state.result.verdict} />
+              <ExplanationPanel explanation={state.result.explanation} />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+              <span>
+                {state.result.cache?.hit && state.result.cache.storedAt
+                  ? `Saved result from ${new Date(state.result.cache.storedAt).toLocaleTimeString()} (results are kept up to 10 minutes).`
+                  : "Fresh result."}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const tx = state.tx;
+                  void check(tx, true);
+                }}
+                className="cursor-pointer rounded-lg border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition hover:bg-cream"
+              >
+                Check again
+              </button>
+            </div>
             {reveal && (
               <ScenarioRevealCard reveal={reveal} actualLevel={state.result.verdict.level} actualLabel={state.result.verdict.label} />
             )}

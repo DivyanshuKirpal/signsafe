@@ -8,10 +8,14 @@
  *                                                 without a fixture to tests/fixtures/scenarios/
  *   npm run scenarios:check -- --record --overwrite   re-record all
  *
- * The AI step does not exist until M5 and verdicts never depend on it, so this
- * always runs with AI off. Transactions are built unsigned and only simulated.
+ *   npm run scenarios:check -- --ai               also run the live Gemini explanation step and print
+ *                                                 whether each text was accepted or fell back
+ *
+ * Verdicts never depend on the AI, so the default is AI off (no Gemini quota
+ * used). Transactions are built unsigned and only simulated.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { explainerFromEnv } from "../app/lib/ai/explain";
 import { analyzeTransaction } from "../app/lib/analyze";
 import { buildScenario } from "../app/lib/scenarios/build";
 import { loadDemoConfig } from "../app/lib/scenarios/demo-config";
@@ -20,6 +24,7 @@ import { createSignSafeRpc, ensureDevnet, redactSecrets } from "../app/lib/solan
 import { createRecordingTransport, type RecordedExchange, toFixtureJson } from "../app/lib/solana/rpc-recording";
 
 const RECORD = process.argv.includes("--record");
+const AI_ON = process.argv.includes("--ai");
 const OVERWRITE = process.argv.includes("--overwrite");
 const FIXTURE_DIR = "tests/fixtures/scenarios";
 const DELAY_MS = 1_500; // keep free RPC plans happy
@@ -38,8 +43,9 @@ async function main(): Promise<void> {
 
   const builder = createSignSafeRpc(primary, fallback);
   if (!(await ensureDevnet(builder.rpc))) throw new Error("The configured RPC is not devnet.");
-  if (process.argv.includes("--ai")) console.log("Note: --ai has no effect yet (the AI step arrives in M5).");
-  console.log(`AI: off. Owner: demo victim ${config.victim}. ${SCENARIOS.length} scenarios.\n`);
+  // Verdicts never depend on the AI; --ai also runs the live explanation step to check its text.
+  const explainer = AI_ON ? explainerFromEnv(process.env, { log: (m) => console.log(`      ${m}`) }) : undefined;
+  console.log(`AI: ${AI_ON ? "on (live Gemini explanation step)" : "off"}. Owner: demo victim ${config.victim}. ${SCENARIOS.length} scenarios.\n`);
 
   let mismatches = 0;
   for (const [i, scenario] of SCENARIOS.entries()) {
@@ -47,7 +53,7 @@ async function main(): Promise<void> {
     const { txBase64 } = await buildScenario(scenario.id, config, builder.rpc);
     const sink: RecordedExchange[] = [];
     const client = createSignSafeRpc(primary, fallback, (t) => createRecordingTransport(t, sink));
-    const { verdict, simulation } = await analyzeTransaction(txBase64, { rpc: client });
+    const { verdict, simulation, explanation } = await analyzeTransaction(txBase64, { rpc: client, explainer });
     const ok = scenario.expected.includes(verdict.level);
     if (!ok) mismatches++;
 
@@ -56,6 +62,16 @@ async function main(): Promise<void> {
     console.log(`      simulation: ${simulation.ran ? (simulation.ok ? "ok" : `failed [${simulation.error?.code}]`) : "not run"}`);
     for (const flag of verdict.flags) {
       console.log(`      [${flag.severity}] ${flag.ruleId}${flag.relatedRuleIds ? " + " + flag.relatedRuleIds.join(", ") : ""}: ${flag.title}`);
+    }
+    if (AI_ON) {
+      const origin =
+        explanation.source === "ai"
+          ? `ACCEPTED FROM GEMINI (${explanation.model})`
+          : `BUILT-IN FALLBACK (${explanation.notice?.code}: ${explanation.notice?.message})`;
+      console.log(`      explanation: ${origin}`);
+      console.log(`        summary: ${explanation.summary}`);
+      for (const p of explanation.points) console.log(`        - ${p}`);
+      console.log(`        advice: ${explanation.advice}`);
     }
 
     const path = `${FIXTURE_DIR}/${scenario.id}.json`;

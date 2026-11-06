@@ -2,20 +2,21 @@
 
 Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`, `ARCHITECTURE.md`. Then run `git log --oneline -15`, `git status`, `npm run check`.
 
-## Timing
-- **Hacking start:** confirmed by the user on Fri 6 Nov 2026 (exact ceremony time not yet given; work began about 11:15 PM IST).
-- **Deadlines (planning values, earlier reading, until the user confirms the Devpost countdown):**
-  - Initial submission: **Sun 8 Nov 2026, 7:30 PM IST**
-  - Final submission and end of hacking: **Sun 8 Nov 2026, 9:15 PM IST**. No commits or pushes after this.
-  - (Later reading, not used for planning: 8:30 PM / 10:15 PM IST.)
-- Devpost countdown confirmed: **not yet**. Devpost rules (video length, required fields): **not yet read**.
+## Timing (confirmed by the user, 6 Nov 2026)
+- **Official MLH schedule:**
+  - Hacking start: **Fri 6 Nov 2026, 10:30 PM IST**. Our local work began about 11:15 PM IST.
+  - Initial submission due: **Sun 8 Nov 2026, 8:30 PM IST**
+  - Final submission and end of hacking: **Sun 8 Nov 2026, 10:15 PM IST**. No commits or pushes after this.
+- **Our personal targets (plan to these):** initial submission by **7:30 PM IST**, final by **9:15 PM IST** on Sun 8 Nov.
+- **Submission platform: MLH Challenges** (not Devpost). `CLAUDE.md` and `ARCHITECTURE.md` say "Devpost"; read that as MLH Challenges. `docs/DEVPOST.md` is the submission draft for MLH Challenges.
+- MLH Challenges rules (video length, required fields): **not yet read**. Ask the user to check them before M8.
 
 ## Milestone approval state
 | Milestone | Status |
 |---|---|
 | M0 Kickoff | **Completed and verified** (Fri 6 Nov, about 11:40 PM IST) |
-| M1 Decode | **Awaiting the user's explicit approval. Do not start.** |
-| M2-M8 | Not approved |
+| M1 Decode | **Approved by the user (Sat 7 Nov ~00:00 IST), in progress.** Approval covers M1 only. User set effort to xhigh. |
+| M2-M8 | Not approved. Stop after M1 and wait. |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges (for example "approved through M3") are recorded here; none so far.
 - **Next recommended effort (M1): high.** Decoding has many edge cases (legacy vs v0 vs v1 messages, lookup tables, signer/writable derivation, parse failures, BigInt amounts).

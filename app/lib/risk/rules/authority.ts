@@ -39,6 +39,31 @@ function closeAuthorityChange(account: string, newAuthority: string, ruleSource:
   };
 }
 
+function unverifiedAuthority(
+  account: string,
+  type: "AccountOwner" | "CloseAccount",
+  newAuthority: string,
+  claimedOwner: string | undefined,
+  source: RawFlag["sources"][number],
+): RawFlag {
+  const what = type === "AccountOwner" ? "owner" : "close authority";
+  const evidence: Record<string, string> = { tokenAccount: account, authorityType: type, newAuthority };
+  if (claimedOwner) evidence.ownerClaimedByInstruction = claimedOwner;
+  return {
+    key: `authority:${account}:${type === "AccountOwner" ? "owner" : "close"}`,
+    ruleId: "R-SET-AUTHORITY",
+    severity: "caution",
+    title: "Token account authority change that could not be verified",
+    detail:
+      `The ${what} of token account ${short(account)} would be set to ${short(newAuthority)}. ` +
+      "Its owner before the transaction could not be read, so SignSafe cannot tell whether this hands the account to someone else." +
+      (claimedOwner ? ` The instruction names ${short(claimedOwner)} as the owner; that claim is unverified.` : ""),
+    account,
+    evidence,
+    sources: [source],
+  };
+}
+
 export function setAuthorityRule(ctx: RiskContext): RawFlag[] {
   const flags: RawFlag[] = [];
   for (const ix of ctx.instructions) {
@@ -49,12 +74,15 @@ export function setAuthorityRule(ctx: RiskContext): RawFlag[] {
     if (!account) continue;
 
     if (type === "AccountOwner" || type === "CloseAccount") {
+      // Removing the close authority hands it back to the owner, whoever that is.
+      if (newAuthority === null) continue;
       const preOwner = ctx.pre.get(account)?.token?.owner;
-      if (!preOwner) flags.push(missingState(account, "owner"));
-      // Removing the close authority hands it back to the owner; same owner is no change.
-      // Fallback to the instruction's owner (the runtime requires that owner's signature).
-      const owner = preOwner ?? ix.accounts.owner;
-      if (newAuthority === null || newAuthority === owner) continue;
+      if (!preOwner) {
+        // No verified owner: the instruction's owner is an unverified claim; report, do not decide.
+        flags.push(unverifiedAuthority(account, type, newAuthority, ix.accounts.owner, ixSource(ix)), missingState(account, "owner"));
+        continue;
+      }
+      if (newAuthority === preOwner) continue;
       flags.push(type === "AccountOwner" ? ownerTakeover(account, newAuthority, ixSource(ix)) : closeAuthorityChange(account, newAuthority, ixSource(ix)));
       continue;
     }
@@ -95,18 +123,32 @@ export function assignRule(ctx: RiskContext): RawFlag[] {
       .filter(Boolean),
   );
 
-  const flag = (account: string, program: string, source: RawFlag["sources"][number], checked: boolean): RawFlag => ({
-    key: `assign:${account}`,
-    ruleId: "R-ASSIGN",
-    severity: "danger",
-    title: "Hands control of a wallet to a program",
-    detail:
-      `Account ${short(account)}, ${checked ? "an existing wallet owned by the System Program" : "which is not created in this transaction"}, ` +
-      `would be assigned to ${programName(program)}. After that, that program controls the account and its SOL.`,
-    account,
-    evidence: { account, newProgram: program, existedBefore: checked ? "yes, owned by the System Program" : "not checked" },
-    sources: [source],
-  });
+  const flag = (account: string, program: string, source: RawFlag["sources"][number], verified: boolean): RawFlag =>
+    verified
+      ? {
+          key: `assign:${account}`,
+          ruleId: "R-ASSIGN",
+          severity: "danger",
+          title: "Hands control of a wallet to a program",
+          detail:
+            `Account ${short(account)}, an existing wallet owned by the System Program, would be assigned to ${programName(program)}. ` +
+            "After that, that program controls the account and its SOL.",
+          account,
+          evidence: { account, newProgram: program, existedBefore: "yes, owned by the System Program" },
+          sources: [source],
+        }
+      : {
+          key: `assign:${account}`,
+          ruleId: "R-ASSIGN",
+          severity: "caution",
+          title: "Account handed to a program; could not verify what it was",
+          detail:
+            `Account ${short(account)} would be assigned to ${programName(program)}. Its state before the transaction could not be read, ` +
+            "so SignSafe cannot tell whether it is an existing wallet (a takeover) or a new account.",
+          account,
+          evidence: { account, newProgram: program, existedBefore: "could not be read" },
+          sources: [source],
+        };
 
   for (const ix of ctx.instructions) {
     if (!isSystemIx(ix) || (ix.action !== "assign" && ix.action !== "assignWithSeed")) continue;

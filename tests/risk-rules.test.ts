@@ -83,14 +83,16 @@ describe("R-APPROVE", () => {
     expect(approveRule(asCoSigner)).toMatchObject([{ severity: "danger" }]);
   });
 
-  test("without pre-state: unlimited is DANGER, a limited amount is CAUTION, and both report the missing state", () => {
-    expect(approveRule(ctxOf({ instructions: [approveIx(U64_MAX_TEXT)] })).map((f) => [f.ruleId, f.severity])).toEqual([
-      ["R-APPROVE", "danger"],
-      ["R-UNRESOLVED", "caution"],
-    ]);
-    const [limited] = approveRule(ctxOf({ instructions: [approveIx("5")] }));
-    expect(limited.severity).toBe("caution");
-    expect(limited.detail).toContain("could not be checked");
+  test("without pre-state: the approval is reported as unverified (CAUTION) plus the gap, unlimited or not", () => {
+    for (const amount of [U64_MAX_TEXT, "5"]) {
+      const flags = approveRule(ctxOf({ instructions: [approveIx(amount)] }));
+      expect(flags.map((f) => [f.ruleId, f.severity])).toEqual([
+        ["R-APPROVE", "caution"],
+        ["R-UNRESOLVED", "caution"],
+      ]);
+      expect(flags[0].title).toBe("Token spending permission that could not be verified");
+      expect(flags[0].evidence.ownerClaimedByInstruction).toBe(VICTIM);
+    }
   });
 
   test("inner (CPI) approvals and Token-2022 ApproveChecked are covered", () => {
@@ -182,11 +184,12 @@ describe("R-ASSIGN", () => {
     expect(merged[0].sources).toHaveLength(2);
   });
 
-  test("without pre-state, an account not created here is still DANGER", () => {
+  test("without pre-state, an account not created here is reported as unverified plus the gap", () => {
     expect(assignRule(ctxOf({ instructions: [assign(VICTIM, ATTACKER)] }))).toMatchObject([
-      { ruleId: "R-ASSIGN", severity: "danger", evidence: { existedBefore: "not checked" } },
+      { ruleId: "R-ASSIGN", severity: "caution", evidence: { existedBefore: "could not be read" } },
       { ruleId: "R-UNRESOLVED", sources: [{ type: "missingState", address: VICTIM }] },
     ]);
+    expect(decideVerdict(runRules(ctxOf({ instructions: [assign(VICTIM, ATTACKER)] })))).toMatchObject({ level: "UNKNOWN", complete: false });
   });
 
   test("negative: new accounts, assign to System, already program-owned", () => {
@@ -368,8 +371,8 @@ describe("empty balance and missing account data (M4 decision)", () => {
     expect(decideVerdict(flags)).toMatchObject({ level: "UNKNOWN", complete: false });
   });
 
-  test("missing account data: an unlimited approval stays DANGER, marked incomplete", () => {
-    expect(verdictOf({ instructions: [approveIx(U64_MAX_TEXT)] })).toMatchObject({ level: "DANGER", complete: false });
+  test("missing account data: even an unlimited approval is Could not fully check (owner unverified)", () => {
+    expect(verdictOf({ instructions: [approveIx(U64_MAX_TEXT)] })).toMatchObject({ level: "UNKNOWN", complete: false });
   });
 
   test("missing data for one account does not hide independent DANGER elsewhere", () => {
@@ -379,18 +382,56 @@ describe("empty balance and missing account data (M4 decision)", () => {
     expect(verdict.flags.map((f) => f.ruleId)).toEqual(["R-ASSIGN", "R-APPROVE", "R-UNRESOLVED"]);
   });
 
-  test("without state, the instruction's owner is only a fallback and the check is always incomplete", () => {
-    // The runtime requires the real owner's signature, so a matching claim means no change, but it is unverified.
-    const selfApprove = runRules(ctxOf({ instructions: [approveIx(U64_MAX_TEXT, { delegate: ATTACKER, owner: ATTACKER })] }));
-    expect(selfApprove.map((f) => f.ruleId)).toEqual(["R-UNRESOLVED"]);
-    expect(decideVerdict(selfApprove)).toMatchObject({ level: "UNKNOWN", complete: false });
+  /**
+   * Ownership correction (user, 7 Nov): without verified owner data the
+   * instruction's owner is an unverified claim. It may neither clear a finding
+   * nor establish Danger.
+   */
+  test("REGRESSION: the instruction claims the delegate is also the owner -> Could not fully check", () => {
+    const claim = approveIx(U64_MAX_TEXT, { delegate: ATTACKER, owner: ATTACKER });
+    // No verified owner: the claim is the only evidence, so the approval stays visible and the verdict is incomplete.
+    const flags = runRules(ctxOf({ instructions: [claim] }));
+    expect(flags.map((f) => `${f.severity}:${f.ruleId}`)).toEqual(["caution:R-APPROVE", "caution:R-UNRESOLVED"]);
+    expect(flags[0].evidence).toMatchObject({ delegate: ATTACKER, ownerClaimedByInstruction: ATTACKER });
+    expect(flags[0].detail).toContain("that claim is unverified");
+    expect(flags[1].sources).toEqual([expect.objectContaining({ type: "missingState", address: TOKEN_ACCOUNT })]);
+    expect(decideVerdict(flags)).toMatchObject({ level: "UNKNOWN", label: "Could not fully check", complete: false });
+    // With verified owner data the same claim is shown to be false: Danger.
+    expect(verdictOf({ instructions: [claim], pre: [victimTokens()] })).toMatchObject({ level: "DANGER", complete: true });
+  });
+
+  test("REGRESSION: independently established Danger is kept and the gap is still shown", () => {
+    const claim = approveIx(U64_MAX_TEXT, { delegate: ATTACKER, owner: ATTACKER });
+    const otherAccount = "8Wf5TiAheLUqBrKXeYg2JtAFFMWtKdG2BSFgqUcPVwTt";
+    const verifiedApproval = ix(TOKEN, "approve", { source: otherAccount, delegate: ATTACKER, owner: VICTIM }, { amount: U64_MAX_TEXT });
+    const verdict = verdictOf({
+      instructions: [claim, verifiedApproval],
+      pre: [tokenState(otherAccount, { owner: VICTIM, amount: "1000" })],
+    });
+    expect(verdict).toMatchObject({ level: "DANGER", complete: false });
+    expect(verdict.flags.map((f) => `${f.severity}:${f.ruleId}:${f.account ?? "-"}`)).toEqual([
+      `danger:R-APPROVE:${otherAccount}`,
+      `caution:R-APPROVE:${TOKEN_ACCOUNT}`,
+      "caution:R-UNRESOLVED:-",
+    ]);
+  });
+
+  test("without verified owner data, set-authority and close-account are unverified too (never Danger, never cleared)", () => {
     const setAuth = (newAuthority: string) =>
       ix(TOKEN, "setAuthority", { owned: TOKEN_ACCOUNT, owner: VICTIM }, { authorityType: "AccountOwner", newAuthority });
-    expect(verdictOf({ instructions: [setAuth(VICTIM)] })).toMatchObject({ level: "UNKNOWN", complete: false });
-    expect(verdictOf({ instructions: [setAuth(ATTACKER)] })).toMatchObject({ level: "DANGER", complete: false });
+    for (const target of [VICTIM, ATTACKER]) {
+      const v = verdictOf({ instructions: [setAuth(target)] });
+      expect(v).toMatchObject({ level: "UNKNOWN", complete: false });
+      expect(v.flags.map((f) => `${f.severity}:${f.ruleId}`)).toEqual(["caution:R-SET-AUTHORITY", "caution:R-UNRESOLVED"]);
+    }
+    // Removing the close authority returns it to the owner, whoever that is: nothing to verify.
+    const removeClose = ix(TOKEN, "setAuthority", { owned: TOKEN_ACCOUNT, owner: VICTIM }, { authorityType: "CloseAccount", newAuthority: null });
+    expect(runRules(ctxOf({ instructions: [removeClose] }))).toEqual([]);
     const close = (destination: string) => ix(TOKEN, "closeAccount", { account: TOKEN_ACCOUNT, destination, owner: VICTIM });
-    expect(verdictOf({ instructions: [close(VICTIM)] }).flags.map((f) => f.ruleId)).toEqual(["R-UNRESOLVED"]);
-    expect(verdictOf({ instructions: [close(ATTACKER)] })).toMatchObject({ level: "UNKNOWN", complete: false });
-    expect(verdictOf({ instructions: [close(ATTACKER)] }).flags.map((f) => f.ruleId)).toEqual(["R-CLOSE-ACCOUNT", "R-UNRESOLVED"]);
+    for (const destination of [VICTIM, ATTACKER]) {
+      const v = verdictOf({ instructions: [close(destination)] });
+      expect(v).toMatchObject({ level: "UNKNOWN", complete: false });
+      expect(v.flags.map((f) => f.ruleId)).toEqual(["R-CLOSE-ACCOUNT", "R-UNRESOLVED"]);
+    }
   });
 });

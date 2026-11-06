@@ -67,11 +67,29 @@ export function closeAccountRule(ctx: RiskContext): RawFlag[] {
     const account = ix.accounts.account;
     const destination = ix.accounts.destination;
     if (!account || !destination) continue;
-    const preOwner = ctx.pre.get(account)?.token?.owner;
-    if (!preOwner) flags.push(missingState(account, "owner"));
-    // Fallback to the instruction's owner (the runtime requires that owner's signature).
-    const owner = preOwner ?? ix.accounts.owner;
-    if (!owner || destination === owner) continue;
+    const owner = ctx.pre.get(account)?.token?.owner;
+    if (!owner) {
+      // No verified owner: whether the SOL goes back to the owner cannot be checked.
+      const claimed = ix.accounts.owner;
+      flags.push(
+        {
+          key: `close:${account}`,
+          ruleId: "R-CLOSE-ACCOUNT",
+          severity: "caution",
+          title: "Closes a token account; could not verify where its SOL goes",
+          detail:
+            `Token account ${short(account)} would be closed and the SOL held in it sent to ${short(destination)}. ` +
+            "Its owner before the transaction could not be read, so SignSafe cannot tell whether that is the owner." +
+            (claimed ? ` The instruction names ${short(claimed)} as the owner; that claim is unverified.` : ""),
+          account,
+          evidence: { tokenAccount: account, destination, ...(claimed ? { ownerClaimedByInstruction: claimed } : {}) },
+          sources: [ixSource(ix)],
+        },
+        missingState(account, "owner"),
+      );
+      continue;
+    }
+    if (destination === owner) continue;
     flags.push({
       key: `close:${account}`,
       ruleId: "R-CLOSE-ACCOUNT",

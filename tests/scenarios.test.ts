@@ -59,10 +59,19 @@ describe("scenario builders (unsigned, fee payer = owner)", () => {
     expect(decoded("s8-memo-injection").instructions[1].args.text).toBe(S8_MEMO);
   });
 
-  test("instruction evidence alone (no RPC) already gives Danger for S2-S5 and S8; the S8 memo changes nothing", async () => {
+  test("without RPC (owners unverified) S2-S5 and S8 are Could not fully check, with the risky step still flagged", async () => {
     const level = async (id: ScenarioId) => (await analyzeTransaction(build(id), { rpc: null })).verdict;
-    for (const id of ["s2-unlimited-approval", "s3-hidden-approval", "s4-token-account-takeover", "s5-wallet-assign", "s8-memo-injection"] as const) {
-      expect((await level(id)).level).toBe("DANGER");
+    const flagged: Record<string, string> = {
+      "s2-unlimited-approval": "R-APPROVE",
+      "s3-hidden-approval": "R-APPROVE",
+      "s4-token-account-takeover": "R-SET-AUTHORITY",
+      "s5-wallet-assign": "R-ASSIGN",
+      "s8-memo-injection": "R-APPROVE",
+    };
+    for (const [id, rule] of Object.entries(flagged)) {
+      const v = await level(id as ScenarioId);
+      expect(v).toMatchObject({ level: "UNKNOWN", complete: false });
+      expect(v.flags.map((f) => f.ruleId)).toContain(rule);
     }
     const s8 = await level("s8-memo-injection");
     expect(s8.flags.find((f) => f.ruleId === "R-MEMO")?.severity).toBe("info");

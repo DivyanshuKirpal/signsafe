@@ -15,7 +15,7 @@ import { analyzeTransaction } from "../app/lib/analyze";
 import { U64_MAX } from "../app/lib/config";
 import { FALLBACK_SENTENCES, VERDICT_LABELS, VERDICT_REASONS } from "../app/lib/risk/templates";
 import type { Verdict } from "../app/lib/types";
-import { buildTxBase64, FRIEND, LOOKUP_TABLE, solPaymentIx, unlimitedApproveIx } from "./helpers/build-tx";
+import { buildTxBase64, DEMO_MINT, FRIEND, LOOKUP_TABLE, solPaymentIx, unlimitedApproveIx, VICTIM, VICTIM_TOKEN_ACCOUNT } from "./helpers/build-tx";
 import { DEVNET_GENESIS, fakeRpc, type LiveFixture, loadFixture, replayFixture } from "./helpers/fake-rpc";
 
 /** Account data recorded in a fixture, by address: pre-state and simulated post-state. */
@@ -189,20 +189,28 @@ describe("state-only and drainer cases (fixture data, synthetic transaction)", (
 describe("incomplete checks (synthetic)", () => {
   const nullAccounts = (params: unknown[]) => ({ context: { slot: 1n }, value: (params[0] as unknown[]).map(() => null) });
 
-  test("simulation not run: payment -> Could not fully check; unlimited approval -> Danger, incomplete", async () => {
+  test("simulation not run: payment and unverified approval -> Could not fully check", async () => {
     const payment = await analyzeTransaction(buildTxBase64([solPaymentIx()]), { rpc: null });
     expect(payment.verdict).toMatchObject({ level: "UNKNOWN", complete: false });
     const approval = await analyzeTransaction(loadFixture("token-approval").txBase64, { rpc: null });
-    expect(approval.verdict).toMatchObject({ level: "DANGER", complete: false });
-    // No state was fetched, so the missing owner/balance is reported too.
-    expect(flagSummary(approval.verdict)).toEqual(["danger:R-APPROVE", "caution:R-UNRESOLVED", "info:R-SIM-FAILED"]);
+    // No state was fetched: the token account's owner is unverified, so the approval is not called Danger.
+    expect(approval.verdict).toMatchObject({ level: "UNKNOWN", complete: false });
+    expect(flagSummary(approval.verdict)).toEqual(["caution:R-APPROVE", "caution:R-UNRESOLVED", "info:R-SIM-FAILED"]);
   });
 
-  test("unresolved lookup table: payment -> Could not fully check; approval -> Danger, incomplete", async () => {
+  test("unresolved lookup table: payment -> Could not fully check; verified approval -> Danger, gap shown", async () => {
+    // The token account exists on "devnet" (verified owner and balance); everything else is missing.
+    const tokenAccount = {
+      lamports: 2_039_280n,
+      owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      executable: false,
+      space: 165n,
+      data: { program: "spl-token", space: 165n, parsed: { type: "account", info: { mint: DEMO_MINT, owner: VICTIM, state: "initialized", isNative: false, tokenAmount: { amount: "1000000000", decimals: 6, uiAmount: 1000, uiAmountString: "1000" } } } },
+    };
     const rpc = () =>
       fakeRpc({
         getGenesisHash: () => DEVNET_GENESIS,
-        getMultipleAccounts: nullAccounts,
+        getMultipleAccounts: (params) => ({ context: { slot: 1n }, value: (params[0] as string[]).map((a) => (a === VICTIM_TOKEN_ACCOUNT ? tokenAccount : null)) }),
         simulateTransaction: () => ({ context: { slot: 2n }, value: { err: "AddressLookupTableNotFound", fee: null, logs: [], accounts: [null], innerInstructions: null } }),
       });
     const tables = { [LOOKUP_TABLE]: [FRIEND] };

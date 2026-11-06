@@ -95,6 +95,40 @@ function flagFor(ruleId: "R-APPROVE" | "R-DELEGATE-STATE", a: Approval, source: 
   };
 }
 
+/**
+ * An approval whose token account could not be read before the transaction.
+ * Severity stays CAUTION: who owns the account is unknown, so it is neither
+ * cleared nor called Danger; the R-UNRESOLVED gap makes the verdict
+ * "Could not fully check" unless verified evidence elsewhere is Danger.
+ */
+function unverifiedApproval(
+  a: { account: string; delegate: string; allowance: bigint; decimals: number | undefined; claimedOwner: string | undefined },
+  source: FlagSource,
+): RawFlag {
+  const amount = tokenText(a.allowance, a.decimals);
+  const evidence: Record<string, string> = {
+    tokenAccount: a.account,
+    delegate: a.delegate,
+    allowance: amount,
+    allowanceRaw: a.allowance.toString(),
+  };
+  if (a.claimedOwner) evidence.ownerClaimedByInstruction = a.claimedOwner;
+  return {
+    key: `approve:${a.account}`,
+    ruleId: "R-APPROVE",
+    severity: "caution",
+    title: "Token spending permission that could not be verified",
+    detail:
+      `${short(a.delegate)} would be allowed to move ${amount} from token account ${short(a.account)}. ` +
+      "The account's owner and balance before the transaction could not be read, so SignSafe cannot tell whether " +
+      `${short(a.delegate)} is the owner or someone else.` +
+      (a.claimedOwner ? ` The instruction names ${short(a.claimedOwner)} as the owner; that claim is unverified.` : ""),
+    account: a.account,
+    evidence,
+    sources: [source],
+  };
+}
+
 export function approveRule(ctx: RiskContext): RawFlag[] {
   const flags: RawFlag[] = [];
 
@@ -105,18 +139,19 @@ export function approveRule(ctx: RiskContext): RawFlag[] {
     const allowance = big(ix.args.amount);
     if (!account || !delegate || allowance === undefined || allowance === 0n) continue;
     const pre = ctx.pre.get(account)?.token;
-    // Missing state makes the check incomplete. The instruction's owner is then the fallback:
-    // the runtime only accepts an Approve signed by the real owner, so a false claim cannot land.
-    const gap = pre ? [] : [missingState(account, "owner and token balance")];
-    const owner = pre?.owner ?? ix.accounts.owner;
-    if (delegate === owner) {
-      flags.push(...gap);
+    const decimals = pre?.decimals ?? (typeof ix.args.decimals === "number" ? ix.args.decimals : ix.token?.decimals);
+    if (!pre) {
+      // No verified owner: the instruction's "owner" is an unverified claim. It can neither clear
+      // the approval (delegate == claimed owner) nor establish Danger. Report it and the gap.
+      flags.push(
+        unverifiedApproval({ account, delegate, allowance, decimals, claimedOwner: ix.accounts.owner }, ixSource(ix)),
+        missingState(account, "owner and token balance"),
+      );
       continue;
     }
-    const decimals = pre?.decimals ?? (typeof ix.args.decimals === "number" ? ix.args.decimals : ix.token?.decimals);
+    if (delegate === pre.owner) continue;
     flags.push(
-      flagFor("R-APPROVE", { account, delegate, owner, allowance, balance: big(pre?.amount), decimals }, ixSource(ix), ctx),
-      ...gap,
+      flagFor("R-APPROVE", { account, delegate, owner: pre.owner, allowance, balance: big(pre.amount), decimals }, ixSource(ix), ctx),
     );
   }
 

@@ -32,8 +32,9 @@ describe("POST /api/analyze (decode only, M1)", () => {
     expect(payment.simulation).toMatchObject({ ran: false, error: { code: "RPC_NOT_CONFIGURED" } });
     // A 200 response can still carry an incomplete check: the verdict says so.
     expect(payment.verdict).toMatchObject({ level: "UNKNOWN", label: "Could not fully check", complete: false });
-    // Independent instruction evidence keeps the approval at Danger.
-    expect(approval.verdict).toMatchObject({ level: "DANGER", complete: false });
+    // Without RPC the token account's owner is unverified: the approval is shown, the verdict is incomplete.
+    expect(approval.verdict).toMatchObject({ level: "UNKNOWN", complete: false });
+    expect(approval.verdict.flags.map((f) => f.ruleId)).toContain("R-APPROVE");
   });
 
   test("the optional user address is echoed back and does not change the verdict", async () => {

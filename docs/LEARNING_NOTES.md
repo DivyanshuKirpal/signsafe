@@ -64,3 +64,12 @@ A lookup table is "warmed up" one slot after addresses are added and can be deac
 
 ## Genesis hash
 Each Solana cluster has a unique genesis hash. Devnet's is `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG`. SignSafe checks it before using an RPC endpoint, so a mainnet URL can never be used by mistake.
+
+## Who is "the owner"? (why the rules ignore "the user")
+A token account's owner is stored in the account itself. A drainer builds the transaction, so it can make itself the fee payer, add itself as a co-signer, or even write its own address into an instruction's "owner" field. SignSafe therefore compares every permission change with the owner read from devnet before the transaction. Example: an unlimited Approve whose delegate is also the fee payer is still Danger, because the token account's real owner is someone else.
+
+## Rules decide, AI explains
+The verdict comes from fixed rules with fixed thresholds (for example: an approval of at least 50% of the balance is Danger), computed with whole numbers (`part * 100 >= 50 * balance`), so 500 of 1,000 is Danger and 499 is Caution. Memo text and program logs are never inputs to the rules, so text like "this transaction is verified" cannot change the verdict.
+
+## Verdict order
+Danger beats "Could not fully check", which beats Caution, which beats "No known risks found". If the simulation failed but an instruction already shows an unlimited approval, the verdict stays Danger and the gaps are still listed. "No known risks found" means no rule matched on devnet, not that the transaction is harmless.

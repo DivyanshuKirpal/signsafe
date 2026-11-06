@@ -1,7 +1,8 @@
 /**
  * Builds real, serialized Solana transactions offline with Kit, so decoder
- * tests need no network (ARCHITECTURE section 13). The addresses are fixed,
- * made-up devnet-style addresses; nothing here is sent anywhere.
+ * tests need no network (ARCHITECTURE section 13). The addresses are fixed
+ * example addresses (some of them happen to exist on devnet, which only matters
+ * when a sample is simulated live). Nothing here is signed or sent.
  */
 import {
   address,

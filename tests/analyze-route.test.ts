@@ -28,6 +28,8 @@ describe("POST /api/analyze (decode only, M1)", () => {
     expect(approval.decoded.instructions.map((ix) => ix.action)).toEqual(["approve"]);
     expect(approval.decoded.instructions[0].args.amount).toBe("18446744073709551615");
     expect(typeof payment.timingsMs.total).toBe("number");
+    // Tests run with no RPC configured (vitest.config.mts), so nothing touches the network.
+    expect(payment.simulation).toMatchObject({ ran: false, error: { code: "RPC_NOT_CONFIGURED" } });
   });
 
   test("accepts a valid optional userAddress and rejects an invalid one", async () => {

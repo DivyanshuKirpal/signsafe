@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import type { AnalyzeResponse, ApiError } from "../lib/types";
+import { CouldNotCheck } from "./could-not-check";
 import { InstructionList } from "./instruction-list";
+import { SimulationPanel } from "./simulation-panel";
 import { TxInput } from "./tx-input";
 import { TxOverview } from "./tx-overview";
 
@@ -67,7 +69,7 @@ export function Checker() {
       <TxInput value={input} onChange={setInput} onSubmit={check} busy={state.status === "loading"} />
 
       <div aria-live="polite">
-        {state.status === "loading" && <p className="text-sm text-muted">Decoding...</p>}
+        {state.status === "loading" && <p className="text-sm text-muted">Decoding and simulating on devnet...</p>}
         {state.status === "error" && (
           <div role="alert" className="rounded-lg border border-destructive p-3 text-sm">
             <p className="font-semibold">Could not check this transaction</p>
@@ -79,8 +81,9 @@ export function Checker() {
       {state.status === "success" && (
         <div className="space-y-6">
           <p className="rounded-lg border border-border p-3 text-sm">
-            Decoded only. Simulation and risk rules are not built yet, so there is no risk verdict.
+            Decoded and simulated only. The risk rules are not built yet, so there is no risk verdict.
           </p>
+          <CouldNotCheck decoded={state.result.decoded} simulation={state.result.simulation} />
           <TxOverview decoded={state.result.decoded} />
           <section aria-labelledby="instructions-heading" className="space-y-3">
             <h2 id="instructions-heading" className="text-lg font-semibold">
@@ -88,6 +91,7 @@ export function Checker() {
             </h2>
             <InstructionList instructions={state.result.decoded.instructions} />
           </section>
+          <SimulationPanel simulation={state.result.simulation} />
         </div>
       )}
     </div>

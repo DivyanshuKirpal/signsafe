@@ -74,16 +74,6 @@ export function TxOverview({ decoded }: { decoded: DecodedTx }) {
           </>
         )}
       </dl>
-      {decoded.warnings.length > 0 && (
-        <div role="note" className="rounded-lg border border-border p-3 text-sm">
-          <p className="font-semibold">Part of this transaction could not be read</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {decoded.warnings.map((w, i) => (
-              <li key={`${w.code}-${i}`}>{w.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
   );
 }

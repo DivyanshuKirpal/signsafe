@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solana Kit Starter",
+  title: "SignSafe",
   description:
-    "Wallet connection and on-chain actions with @solana/kit, the kit plugin client, and @solana/react",
+    "See what a Solana transaction will do before you sign it. Rules decide the risk, AI explains it.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

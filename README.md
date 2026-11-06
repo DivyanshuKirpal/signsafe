@@ -1,78 +1,54 @@
-# signsafe
+# SignSafe
 
-Next.js starter built on `@solana/kit` v8, Kit plugins, and [`@solana/react`](https://www.npmjs.com/package/@solana/react). Connect a browser wallet, switch networks, and send real transactions — SOL transfers, SPL token actions, and memos.
+SignSafe shows what a Solana transaction will actually do before you sign it, and warns you in plain English when it looks like a wallet drainer.
 
-## Getting Started
+Built for the MLH Solana Hackathon (6-8 November 2026), AI Track.
 
-Requires Node.js 24 or newer.
-
-```shell
-npx -y create-solana-dapp@latest -t solana-foundation/templates/kit/signsafe
-```
-
-```shell
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000), connect a wallet, and (on devnet) click **Airdrop 1 SOL** to fund it. Then try the actions. Need devnet SOL another way? [faucet.solana.com](https://faucet.solana.com/).
-
-To use localnet, start a local validator in another terminal before selecting
-**localnet**:
-
-```shell
-solana-test-validator
-```
-
-## What's Included
-
-- **Wallet connection** via the Kit wallet plugin (wallet-standard discovery, auto-reconnect)
-- **Network switcher** — devnet, testnet, mainnet, localnet
-- **Transfer SOL** with the [`@solana-program/system`](https://www.npmjs.com/package/@solana-program/system) kit plugin
-- **Token actions** — create a mint, mint tokens, and transfer them with the [`@solana-program/token`](https://www.npmjs.com/package/@solana-program/token) kit plugin (associated token accounts created for you)
-- **Add memo** with the [`@solana-program/memo`](https://www.npmjs.com/package/@solana-program/memo) kit plugin
-- **Live balance** and **toast notifications** with explorer links
-- **Tailwind CSS v4** with light/dark mode
+> Work in progress. This README is filled in as features land.
 
 ## How it works
 
-The app builds a Kit client in [`app/lib/solana-client.ts`](app/lib/solana-client.ts). The Kit wallet plugin supplies the connected wallet's transaction signer:
-
-```ts
-createClient()
-  .use(walletSigner({ chain }))
-  .use(solanaRpc({ rpcUrl, rpcSubscriptionsUrl, transactionConfig }))
-  .use(rpcAirdrop()) // client.airdrop (non-mainnet)
-  .use(systemProgram()) // client.system.instructions.transferSol
-  .use(tokenProgram()) // client.token.instructions.{createMint,mintToATA,transferToATA}
-  .use(memoProgram()); // client.memo.instructions.addMemo
+```
+Decode -> Simulate (devnet) -> State diff -> Risk rules -> Verdict -> AI explanation
 ```
 
-Components use `useAppClient()` and the Kit wallet hooks from the local provider. Sending uses `client.sendTransaction([instruction])` or the program plugin's instruction-plan helpers.
+Fixed, unit-tested rules decide the risk level. The AI model only explains the result and cannot change it. If the AI is unavailable, a built-in explanation is used.
 
-The Kit 8 RPC planner is configured to emit Version 1 transactions. This
-requires `@solana/kit-plugin-rpc` 0.19 or newer and a wallet that advertises
-Version 1 signing support. Version 1 transactions use a total priority fee in
-lamports and keep resource-limit estimation enabled through the RPC planner.
+## Setup
 
-### Switching networks
+Requirements: Node.js 24 or newer, npm.
 
-A kit client is bound to one chain and RPC endpoint. The cluster dropdown rebuilds the client for that cluster. See [`app/lib/client-provider.tsx`](app/lib/client-provider.tsx).
-
-## Testing
-
-```shell
-npm run test
+```
+npm install
+copy .env.example .env.local     # then fill in your own values in .env.local
+npm run check:env                # reports present / missing only, never values
+npm run dev                      # http://localhost:3000
 ```
 
-The tests in [`tests/`](tests/) drive the real UI — click **Connect Wallet**, pick a wallet, fill in the transfer form, press **Send SOL** — and assert on-chain state before and after each click. Three pieces make that work without a browser or a wallet extension:
+## Scripts
 
-- **[`@solana/surfpool` 1.7.0](https://www.npmjs.com/package/@solana/surfpool/v/1.7.0)** starts an isolated, in-process local runtime with dynamic RPC and WebSocket ports. It supports V1 transactions and provides funding helpers without a separate validator process.
-- **A mock wallet-standard wallet** ([`tests/mock-wallet.ts`](tests/mock-wallet.ts)) registers itself like any browser extension would, so the app's real wallet discovery, connect flow, and transaction signing run unmodified — signatures come from an in-memory keypair.
-- **[Vitest](https://vitest.dev) + [Testing Library](https://testing-library.com/docs/react-testing-library/intro/)** render the actual app components in jsdom and interact with them by role and label, the same way a user would.
+| Script | What it does |
+|---|---|
+| `npm run dev` / `npm run build` | Next.js dev server / production build |
+| `npm run check` | typecheck + lint + unit tests |
+| `npm run check:env` | reports which config variables are present or missing |
+| `npm run scan:secrets` | scans tracked and staged files for real key patterns |
+| `npm run setup:demo` | (planned) creates devnet demo accounts |
+| `npm run scenarios:check` | (planned) runs every demo scenario and compares verdicts |
+| `npm run fixtures:save` | (planned) saves scenario results for offline replay |
 
-The tests point `AppClientProvider` at Surfpool through its optional URL override and assert that sent transactions have version 1 as well as their expected local-chain effects. Each run starts its own runtime and stops it during teardown. No existing validator, ledger, or devnet funds are used.
+## Security notes
 
-Surfpool's native test runtime supports Linux x64 and macOS x64/arm64. On Windows, run the tests in a supported Linux x64 WSL environment with Node.js 24 or newer. No separate Solana CLI installation is required.
+- Devnet only. Anything that sends a transaction runs on devnet.
+- The app never asks for a seed phrase or private key.
+- API keys stay on the server and are read from `.env.local`, which is git-ignored.
 
-The tests use `Surfnet.startWithConfig` with remote account fallback enabled so Surfpool can fetch the deployed Memo program. An internet connection and an available mainnet RPC are required. The default is `https://api.mainnet-beta.solana.com`; set `SOLANA_TEST_REMOTE_RPC_URL` to use another mainnet RPC if needed. Test transactions are sent only to Surfpool's local RPC, never to the upstream network. No Memo binary or license fixture is bundled, and no Solana CLI dump or deployment step is needed.
+## Credits
+
+- Scaffolded from the official Solana `kit/nextjs` template (solana-foundation/templates, via `create-solana-dapp`). The template's demo pages were removed.
+- Libraries: Next.js, React, Tailwind CSS, `@solana/kit`, `@solana-program/*` clients, zod, vitest, tsx.
+- Built with help from Claude Code.
+
+## License
+
+MIT. See `LICENSE`.

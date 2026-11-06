@@ -30,6 +30,19 @@ describe("POST /api/analyze (decode only, M1)", () => {
     expect(typeof payment.timingsMs.total).toBe("number");
     // Tests run with no RPC configured (vitest.config.mts), so nothing touches the network.
     expect(payment.simulation).toMatchObject({ ran: false, error: { code: "RPC_NOT_CONFIGURED" } });
+    // A 200 response can still carry an incomplete check: the verdict says so.
+    expect(payment.verdict).toMatchObject({ level: "UNKNOWN", label: "Could not fully check", complete: false });
+    // Independent instruction evidence keeps the approval at Danger.
+    expect(approval.verdict).toMatchObject({ level: "DANGER", complete: false });
+  });
+
+  test("the optional user address is echoed back and does not change the verdict", async () => {
+    const tx = buildTxBase64([unlimitedApproveIx()]);
+    const without = (await (await post({ input: { kind: "base64", tx } })).json()) as AnalyzeResponse;
+    const withAddress = (await (await post({ input: { kind: "base64", tx, userAddress: VICTIM } })).json()) as AnalyzeResponse;
+    expect(withAddress.userAddress).toBe(VICTIM);
+    expect(without.userAddress).toBeUndefined();
+    expect(withAddress.verdict).toEqual(without.verdict);
   });
 
   test("accepts a valid optional userAddress and rejects an invalid one", async () => {

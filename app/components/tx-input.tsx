@@ -6,11 +6,13 @@ import { LIMITS } from "../lib/config";
 interface TxInputProps {
   value: string;
   onChange: (value: string) => void;
+  userAddress: string;
+  onUserAddressChange: (value: string) => void;
   onSubmit: () => void;
   busy: boolean;
 }
 
-export function TxInput({ value, onChange, onSubmit, busy }: TxInputProps) {
+export function TxInput({ value, onChange, userAddress, onUserAddressChange, onSubmit, busy }: TxInputProps) {
   const length = value.trim().length;
   const tooLong = value.length > LIMITS.maxInputChars;
 
@@ -41,6 +43,24 @@ export function TxInput({ value, onChange, onSubmit, busy }: TxInputProps) {
         aria-describedby="tx-input-help"
         className="w-full rounded-lg border border-border bg-card p-3 font-mono text-xs leading-relaxed break-all"
       />
+      <div>
+        <label htmlFor="user-address" className="block text-sm font-medium">
+          Which address is yours? <span className="font-normal text-muted">(optional)</span>
+        </label>
+        <input
+          id="user-address"
+          value={userAddress}
+          onChange={(event) => onUserAddressChange(event.target.value)}
+          spellCheck={false}
+          autoComplete="off"
+          placeholder="Your wallet address"
+          aria-describedby="user-address-help"
+          className="mt-1 w-full rounded-lg border border-border bg-card p-2 font-mono text-xs"
+        />
+        <p id="user-address-help" className="mt-1 text-xs text-muted">
+          Only used to mark your address with &quot;(you)&quot;. It never changes the verdict.
+        </p>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p id="tx-input-help" className={`text-xs ${tooLong ? "text-destructive" : "text-muted"}`}>
           {value.length.toLocaleString("en-US")} / {LIMITS.maxInputChars.toLocaleString("en-US")} characters

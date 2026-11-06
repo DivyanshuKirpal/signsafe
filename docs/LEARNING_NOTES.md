@@ -73,3 +73,15 @@ The verdict comes from fixed rules with fixed thresholds (for example: an approv
 
 ## Verdict order
 Danger beats "Could not fully check", which beats Caution, which beats "No known risks found". If the simulation failed but an instruction already shows an unlimited approval, the verdict stays Danger and the gaps are still listed. "No known risks found" means no rule matched on devnet, not that the transaction is harmless.
+
+## Keypair files
+A Solana keypair file is a JSON array of 64 numbers: 32 bytes of private key followed by 32 bytes of public key (the address). SignSafe's demo keypairs live in `keys/` (git-ignored, devnet only). Anyone with the file controls the account, which is why the scan looks for 64-number arrays and the app never reads these files.
+
+## Creating a token (mint) and a token account
+A token is a mint account owned by the Token program, holding the decimals (DEMO uses 6), the supply and the mint authority. Creating one takes two instructions in one transaction: System `createAccount` (pays rent, assigns the account to the Token program) and Token `initializeMint2`. Each wallet then needs a token account for that mint; the associated token account (ATA) address is derived from wallet + mint, and `createAssociatedTokenIdempotent` creates it only if missing. `mintTo` (signed by the mint authority) adds tokens. Setup gave the demo victim 1,000 DEMO this way.
+
+## Signed vs unsigned transactions
+A transaction is only valid on chain once every required signer has signed it. SignSafe's demo scenarios are built unsigned, with the victim as fee payer, and are only simulated (`sigVerify: false`), so they can never move anything. The only transactions SignSafe signs are the three setup transactions, with demo keys, on devnet.
+
+## Idempotent setup
+Running a setup twice must not mint or pay twice. setup:demo reads the current state first (does the mint exist, how many DEMO and SOL does the victim have) and only does what is missing. After the funded run created everything, a second run printed "to do: nothing" and sent no transaction.

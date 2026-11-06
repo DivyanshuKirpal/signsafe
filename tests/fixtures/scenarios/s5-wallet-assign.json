@@ -1,0 +1,158 @@
+{
+  "case": "s5-wallet-assign",
+  "description": "A System Assign that hands the wallet account itself to an address the attacker chose as its new owning program.",
+  "source": "live devnet RPC, recorded by scripts/scenarios-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T21:29:07.402Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABrc1znGyXFbFY2fXP0PX7PFUMQ1SI+YX/mhqqpvxx3pgEBAQAkAQAAAD2caM5h8l9ho8HZWSw+bfP0v4uDHjfgFVZy+goh7NyaAA==",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "21"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519434519"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "50000000"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            }
+          ]
+        },
+        "id": "22"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABrc1znGyXFbFY2fXP0PX7PFUMQ1SI+YX/mhqqpvxx3pgEBAQAkAQAAAD2caM5h8l9ho8HZWSw+bfP0v4uDHjfgFVZy+goh7NyaAA==",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.1",
+            "slot": {
+              "$bigint": "519434520"
+            }
+          },
+          "value": {
+            "accounts": [
+              {
+                "data": [
+                  "",
+                  "base64"
+                ],
+                "executable": false,
+                "lamports": {
+                  "$bigint": "49995000"
+                },
+                "owner": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "0"
+                }
+              }
+            ],
+            "err": null,
+            "fee": {
+              "$bigint": "5000"
+            },
+            "innerInstructions": [],
+            "loadedAccountsDataSize": {
+              "$bigint": "142"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [
+              "Program 11111111111111111111111111111111 invoke [1]",
+              "Program 11111111111111111111111111111111 success"
+            ],
+            "postBalances": [
+              {
+                "$bigint": "49995000"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "postTokenBalances": [],
+            "preBalances": [
+              {
+                "$bigint": "50000000"
+              },
+              {
+                "$bigint": "1"
+              }
+            ],
+            "preTokenBalances": [],
+            "replacementBlockhash": {
+              "blockhash": "GgH1oEhsaZkjWY2DEPUejpAng2iCAukkjULzLPBu5GjL",
+              "lastValidBlockHeight": {
+                "$bigint": "506585869"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "150"
+            }
+          }
+        },
+        "id": "23"
+      }
+    }
+  ]
+}

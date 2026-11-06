@@ -18,8 +18,8 @@ export interface LiveFixture {
   exchanges: RecordedExchange[];
 }
 
-export function loadFixture(name: string): LiveFixture {
-  return fromFixtureJson<LiveFixture>(readFileSync(`tests/fixtures/live/${name}.json`, "utf8"));
+export function loadFixture(name: string, dir = "tests/fixtures/live"): LiveFixture {
+  return fromFixtureJson<LiveFixture>(readFileSync(`${dir}/${name}.json`, "utf8"));
 }
 
 export function replayFixture(fixture: LiveFixture): SignSafeRpc {

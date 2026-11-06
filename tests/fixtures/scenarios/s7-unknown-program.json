@@ -1,0 +1,159 @@
+{
+  "case": "s7-unknown-program",
+  "description": "Calls a deployed devnet program that SignSafe does not recognise, passing the wallet as a signer.",
+  "source": "live devnet RPC, recorded by scripts/scenarios-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T21:29:13.090Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBC7wPwLtHyi90xBEulKsTz6PGNOXcF+rLA80aI81+eHwysSb/XZ2u+MtnWg3pZ0GEL2zcKTGpmRQMv+JQfao17AEBAQAKbWludCBiYWRnZQA=",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "30"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519434543"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "50000000"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            }
+          ]
+        },
+        "id": "31"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBC7wPwLtHyi90xBEulKsTz6PGNOXcF+rLA80aI81+eHwysSb/XZ2u+MtnWg3pZ0GEL2zcKTGpmRQMv+JQfao17AEBAQAKbWludCBiYWRnZQA=",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.1",
+            "slot": {
+              "$bigint": "519434544"
+            }
+          },
+          "value": {
+            "accounts": [
+              {
+                "data": [
+                  "",
+                  "base64"
+                ],
+                "executable": false,
+                "lamports": {
+                  "$bigint": "49995000"
+                },
+                "owner": "11111111111111111111111111111111",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "0"
+                }
+              }
+            ],
+            "err": null,
+            "fee": {
+              "$bigint": "5000"
+            },
+            "innerInstructions": [],
+            "loadedAccountsDataSize": {
+              "$bigint": "39361"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [
+              "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV invoke [1]",
+              "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV consumed 322 of 200000 compute units",
+              "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV success"
+            ],
+            "postBalances": [
+              {
+                "$bigint": "49995000"
+              },
+              {
+                "$bigint": "1141440"
+              }
+            ],
+            "postTokenBalances": [],
+            "preBalances": [
+              {
+                "$bigint": "50000000"
+              },
+              {
+                "$bigint": "1141440"
+              }
+            ],
+            "preTokenBalances": [],
+            "replacementBlockhash": {
+              "blockhash": "CTG1XgXdGVd7y4vPXPG1WPegr8VBmW93k85NHw8e272Q",
+              "lastValidBlockHeight": {
+                "$bigint": "506585893"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "322"
+            }
+          }
+        },
+        "id": "32"
+      }
+    }
+  ]
+}

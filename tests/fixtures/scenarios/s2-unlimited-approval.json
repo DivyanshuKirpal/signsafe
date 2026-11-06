@@ -1,0 +1,377 @@
+{
+  "case": "s2-unlimited-approval",
+  "description": "An SPL Token Approve that lets the attacker move an unlimited amount of the wallet's DEMO tokens at any time.",
+  "source": "live devnet RPC, recorded by scripts/scenarios-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T21:28:57.895Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBDbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBN0yAlmMcOvG57n9+kkkkzGqz8Xl4QubRQRv7kNgOqB49nGjOYfJfYaPB2VksPm3z9L+Lgx434BVWcvoKIezcmgbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCp3K3OlhBfjx/omZrsKmy3rRXM9D36UNd44/U93CZLdT0BAwMBAgAJBP//////////AA==",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "6"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519434477"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "50000000"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            },
+            {
+              "lamports": {
+                "$bigint": "1488440"
+              },
+              "data": {
+                "program": "spl-token",
+                "parsed": {
+                  "info": {
+                    "isNative": false,
+                    "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+                    "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+                    "state": "initialized",
+                    "tokenAmount": {
+                      "amount": "1000000000",
+                      "decimals": {
+                        "$bigint": "6"
+                      },
+                      "uiAmount": 1000,
+                      "uiAmountString": "1000"
+                    }
+                  },
+                  "type": "account"
+                },
+                "space": {
+                  "$bigint": "165"
+                }
+              },
+              "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "165"
+              }
+            }
+          ]
+        },
+        "id": "7"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519434479"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "1066800"
+              },
+              "data": {
+                "program": "spl-token",
+                "parsed": {
+                  "info": {
+                    "decimals": {
+                      "$bigint": "6"
+                    },
+                    "freezeAuthority": null,
+                    "isInitialized": true,
+                    "mintAuthority": "7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3",
+                    "supply": "1000000000"
+                  },
+                  "type": "mint"
+                },
+                "space": {
+                  "$bigint": "82"
+                }
+              },
+              "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "82"
+              }
+            }
+          ]
+        },
+        "id": "8"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBDbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBN0yAlmMcOvG57n9+kkkkzGqz8Xl4QubRQRv7kNgOqB49nGjOYfJfYaPB2VksPm3z9L+Lgx434BVWcvoKIezcmgbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCp3K3OlhBfjx/omZrsKmy3rRXM9D36UNd44/U93CZLdT0BAwMBAgAJBP//////////AA==",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+              "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+              "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.1",
+            "slot": {
+              "$bigint": "519434480"
+            }
+          },
+          "value": {
+            "accounts": [
+              {
+                "data": [
+                  "",
+                  "base64"
+                ],
+                "executable": false,
+                "lamports": {
+                  "$bigint": "49995000"
+                },
+                "owner": "11111111111111111111111111111111",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "0"
+                }
+              },
+              {
+                "data": {
+                  "parsed": {
+                    "info": {
+                      "delegate": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+                      "delegatedAmount": {
+                        "amount": "18446744073709551615",
+                        "decimals": {
+                          "$bigint": "6"
+                        },
+                        "uiAmount": 18446744073709.55,
+                        "uiAmountString": "18446744073709.551615"
+                      },
+                      "isNative": false,
+                      "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+                      "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+                      "state": "initialized",
+                      "tokenAmount": {
+                        "amount": "1000000000",
+                        "decimals": {
+                          "$bigint": "6"
+                        },
+                        "uiAmount": 1000,
+                        "uiAmountString": "1000"
+                      }
+                    },
+                    "type": "account"
+                  },
+                  "program": "spl-token",
+                  "space": {
+                    "$bigint": "165"
+                  }
+                },
+                "executable": false,
+                "lamports": {
+                  "$bigint": "1488440"
+                },
+                "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "165"
+                }
+              },
+              {
+                "data": {
+                  "parsed": {
+                    "info": {
+                      "decimals": {
+                        "$bigint": "6"
+                      },
+                      "freezeAuthority": null,
+                      "isInitialized": true,
+                      "mintAuthority": "7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3",
+                      "supply": "1000000000"
+                    },
+                    "type": "mint"
+                  },
+                  "program": "spl-token",
+                  "space": {
+                    "$bigint": "82"
+                  }
+                },
+                "executable": false,
+                "lamports": {
+                  "$bigint": "1066800"
+                },
+                "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "rentEpoch": {
+                  "$bigint": "18446744073709551615"
+                },
+                "space": {
+                  "$bigint": "82"
+                }
+              }
+            ],
+            "err": null,
+            "fee": {
+              "$bigint": "5000"
+            },
+            "innerInstructions": [],
+            "loadedAccountsDataSize": {
+              "$bigint": "109102"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [
+              "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]",
+              "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 123 of 200000 compute units",
+              "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success"
+            ],
+            "postBalances": [
+              {
+                "$bigint": "49995000"
+              },
+              {
+                "$bigint": "1488440"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "20428277856"
+              }
+            ],
+            "postTokenBalances": [
+              {
+                "accountIndex": {
+                  "$bigint": "1"
+                },
+                "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+                "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+                "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "uiTokenAmount": {
+                  "amount": "1000000000",
+                  "decimals": {
+                    "$bigint": "6"
+                  },
+                  "uiAmount": 1000,
+                  "uiAmountString": "1000"
+                }
+              }
+            ],
+            "preBalances": [
+              {
+                "$bigint": "50000000"
+              },
+              {
+                "$bigint": "1488440"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "20428277856"
+              }
+            ],
+            "preTokenBalances": [
+              {
+                "accountIndex": {
+                  "$bigint": "1"
+                },
+                "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+                "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+                "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "uiTokenAmount": {
+                  "amount": "1000000000",
+                  "decimals": {
+                    "$bigint": "6"
+                  },
+                  "uiAmount": 1000,
+                  "uiAmountString": "1000"
+                }
+              }
+            ],
+            "replacementBlockhash": {
+              "blockhash": "4cYMWoAKFk5MjcVmYcqoLYbdrSXx8v5huVKbJbG2knWd",
+              "lastValidBlockHeight": {
+                "$bigint": "506585829"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "123"
+            }
+          }
+        },
+        "id": "9"
+      }
+    }
+  ]
+}

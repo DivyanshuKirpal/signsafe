@@ -3,15 +3,12 @@
  * Live verdicts are checked by `npm run scenarios:check` and replayed from
  * tests/fixtures/scenarios in scenarios-replay.test.ts.
  */
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { address, blockhash } from "@solana/kit";
 import { describe, expect, test } from "vitest";
 import { GET, POST } from "../app/api/scenarios/route";
 import { analyzeTransaction } from "../app/lib/analyze";
 import { compileScenario, type ScenarioContext, scenarioInstructions } from "../app/lib/scenarios/build";
-import { loadDemoConfig } from "../app/lib/scenarios/demo-config";
+import { parseDemoConfig } from "../app/lib/scenarios/demo-config";
 import { S8_MEMO, SCENARIO_IDS, SCENARIOS, type ScenarioId } from "../app/lib/scenarios/index";
 import { decodeWireTransaction, parseWireTransaction } from "../app/lib/solana/decode";
 
@@ -102,7 +99,6 @@ describe("/api/scenarios", () => {
 
 describe("demo config", () => {
   test("validates addresses and keeps public fields only", () => {
-    const dir = mkdtempSync(join(tmpdir(), "signsafe-"));
     const good = {
       cluster: "devnet",
       authority: ctx.owner,
@@ -116,12 +112,11 @@ describe("demo config", () => {
       updatedAt: "2026-11-07T00:00:00Z",
       secretKey: [1, 2, 3],
     };
-    writeFileSync(join(dir, "ok.json"), JSON.stringify(good));
-    const loaded = loadDemoConfig(join(dir, "ok.json"));
+    const loaded = parseDemoConfig(JSON.stringify(good));
     expect(loaded?.victim).toBe(ctx.owner);
     expect(loaded && "secretKey" in loaded).toBe(false);
-    writeFileSync(join(dir, "bad.json"), JSON.stringify({ ...good, cluster: "mainnet" }));
-    expect(loadDemoConfig(join(dir, "bad.json"))).toBeNull();
-    expect(loadDemoConfig(join(dir, "missing.json"))).toBeNull();
+    expect(parseDemoConfig(JSON.stringify({ ...good, cluster: "mainnet" }))).toBeNull();
+    expect(parseDemoConfig(JSON.stringify({ ...good, victim: "not-an-address" }))).toBeNull();
+    expect(parseDemoConfig("{not json")).toBeNull();
   });
 });

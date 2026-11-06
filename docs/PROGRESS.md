@@ -18,7 +18,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M1 Decode | Completed and verified (Sat 7 Nov ~00:20 IST) |
 | M2 Simulate and diff | Completed and verified (Sat 7 Nov ~00:55 IST) |
 | M3 Rules and verdict | **Completed and verified** (Sat 7 Nov ~01:40 IST). Approved by the user for M3 only (user chose xhigh effort). |
-| M4 Scenarios | **Awaiting the user's explicit approval. Do not start.** Demo funding happens in M4 (option A: user sends ~1 devnet SOL from Phantom). |
+| M4 Scenarios | **Approved (M4 only), in progress: PAUSED FOR FUNDING** (Sat 7 Nov ~02:20 IST). Demo-authority `7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3` has 0 devnet SOL; the user will send ~1 devnet SOL from Phantom (option A), then `npm run setup:demo` is rerun (it checks the balance first). |
 | M5-M8 | Not approved. Gemini stays in M5. |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges (for example "approved through M3") are recorded here; none so far.
@@ -68,8 +68,10 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - Live route (dev server, Helius primary): payment "No known risks found"; approval "Danger" (merged flag) identical for 3 user-address variants; approval with unfunded fee payer "Danger" + incomplete. No warnings or secrets in the server log.
 - `npm run scan:secrets`: clean. Fixtures: no URLs or keys.
 
-## Partially implemented work
-- None. M4 has not started.
+## Partially implemented work (M4)
+- Done and pushed: empty-balance decision (rules + tests); `app/lib/scenarios/{index,build,demo-config}.ts`; `app/api/scenarios/route.ts`; `app/components/scenario-buttons.tsx` + checker wiring; `scripts/setup-demo.ts`; `scripts/scenarios-check.ts`; `tests/scenarios.test.ts` (offline).
+- Keypairs created in `keys/` (git-ignored, verified): authority `7uGE...duVV3`, victim `4gow...pj9r`, attacker `59WC...v3ZB`, mint `5yGY...KNss`. Rerun reuses them (verified).
+- Waiting: funding. Then: rerun `npm run setup:demo` (creates DEMO mint, victim token account + 1,000 DEMO, 0.05 SOL to victim, writes `data/demo.devnet.json`), commit `data/demo.devnet.json`, `npm run scenarios:check -- --record`, add the replay test for `tests/fixtures/scenarios/`, live UI check of the scenario buttons, docs, milestone checkpoint.
 
 ## Next three steps (once M4 is approved)
 1. `scripts/setup-demo.ts`: create/load `keys/demo-{authority,victim,attacker}.json` (devnet only, git-ignored), print addresses/balances, stop and ask the user to send ~1 devnet SOL from Phantom to the demo authority (option A) if below 0.3 SOL; DEMO mint (6 decimals), victim ATA + 1,000 DEMO, 0.05 SOL to victim; write `data/demo.devnet.json` (public addresses only).

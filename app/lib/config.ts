@@ -8,6 +8,27 @@ export const U64_MAX = 18_446_744_073_709_551_615n;
 
 export const LAMPORTS_PER_SOL = 1_000_000_000n;
 
+/**
+ * Risk thresholds (ARCHITECTURE section 9.4). Rules and tests read them from
+ * here; tune them here, never inside the rules. Percentages are compared with
+ * integer math: part * 100 >= pct * whole.
+ */
+export const RISK = {
+  /** An approval of at least this % of the token balance is DANGER (below: CAUTION). */
+  approveDangerPct: 50n,
+  /** A signer losing at least this % of a balance is DANGER. */
+  outflowDangerPct: 90n,
+  /** A signer losing at least this % of a balance is CAUTION. */
+  outflowCautionPct: 50n,
+  /** SOL balances below this are ignored by R-OUTFLOW (0.001 SOL). */
+  outflowDustLamports: 1_000_000n,
+  /** A priority fee above this is CAUTION (0.01 SOL). */
+  feeCautionLamports: 10_000_000n,
+  /** Compute-unit limit assumed per instruction when none is set (legacy/v0). */
+  defaultComputeUnitsPerInstruction: 200_000n,
+  maxComputeUnits: 1_400_000n,
+} as const;
+
 export const LIMITS = {
   /** Max pasted input. A 4,096-byte transaction is about 5,500 base64 characters. */
   maxInputChars: 12_000,

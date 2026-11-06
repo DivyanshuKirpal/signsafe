@@ -4,6 +4,7 @@
  * state diff can compare. RPC data is validated, not trusted.
  */
 import { z } from "zod";
+import type { AccountState } from "../types";
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 
@@ -126,4 +127,28 @@ export function toSnapshot(account: unknown): AccountSnapshot | null {
     }
   }
   return snapshot;
+}
+
+/** JSON-safe form of a snapshot for the API response and the rules. */
+export function toAccountState(address: string, snapshot: AccountSnapshot | null): AccountState {
+  if (!snapshot) return { address, exists: false };
+  const state: AccountState = { address, exists: true, lamports: snapshot.lamports.toString(), owner: snapshot.owner };
+  if (snapshot.token) {
+    const t = snapshot.token;
+    state.token = {
+      program: t.program,
+      mint: t.mint,
+      owner: t.owner,
+      amount: t.amount.toString(),
+      decimals: t.decimals,
+      delegate: t.delegate,
+      delegatedAmount: t.delegatedAmount.toString(),
+      closeAuthority: t.closeAuthority,
+    };
+  }
+  if (snapshot.mint) {
+    const m = snapshot.mint;
+    state.mint = { decimals: m.decimals, supply: m.supply.toString(), mintAuthority: m.mintAuthority, freezeAuthority: m.freezeAuthority };
+  }
+  return state;
 }

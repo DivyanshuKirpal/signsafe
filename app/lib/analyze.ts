@@ -1,11 +1,12 @@
 /**
  * The analysis pipeline shared by /api/analyze and the scripts:
- * decode -> simulate and diff. (Rules and verdict: M3. AI explanation: M5.)
+ * decode -> simulate and diff -> rules and verdict. (AI explanation: M5.)
  *
  * The RPC is passed in, so tests can replay recorded devnet traffic and the
  * route can use the configured endpoints.
  */
 import type { AnalyzeResponse, SimulationErrorCode, SimulationResult } from "./types";
+import { assessRisk } from "./risk/engine";
 import { decodeTransaction, normalizeBase64Input } from "./solana/decode";
 import { ensureDevnet, lookupTableFetcher, redactSecrets, type SignSafeRpc } from "./solana/rpc";
 import { SimulationUnavailableError, simulateDecoded } from "./solana/simulate";
@@ -15,6 +16,11 @@ export interface AnalyzeDeps {
   rpc: SignSafeRpc | null;
   /** Optional sink for server-side diagnostics (never shown to users). */
   log?: (message: string) => void;
+}
+
+export interface AnalyzeOptions {
+  /** "Which address is yours?" Only echoed back for wording; the rules never see it. */
+  userAddress?: string;
 }
 
 const NOT_RUN_MESSAGES: Record<"RPC_NOT_CONFIGURED" | "RPC_NOT_DEVNET" | "RPC_UNAVAILABLE", string> = {
@@ -35,13 +41,18 @@ export function notRun(code: keyof typeof NOT_RUN_MESSAGES): SimulationResult {
     changes: [],
     watched: [],
     notWatched: [],
+    preState: [],
   };
 }
 
 type Analysis = Omit<AnalyzeResponse, "requestId">;
 
 /** Throws DecodeError for unusable input; everything else becomes part of the result. */
-export async function analyzeTransaction(input: string, deps: AnalyzeDeps): Promise<Analysis> {
+export async function analyzeTransaction(
+  input: string,
+  deps: AnalyzeDeps,
+  options: AnalyzeOptions = {},
+): Promise<Analysis> {
   const started = performance.now();
   const timingsMs: Record<string, number> = {};
   const lap = (name: string, from: number) => {
@@ -83,6 +94,13 @@ export async function analyzeTransaction(input: string, deps: AnalyzeDeps): Prom
     lap("simulate", simStart);
   }
 
+  const rulesStart = performance.now();
+  // The verdict depends only on the decoded transaction and the simulation.
+  const verdict = assessRisk(decoded, simulation);
+  lap("rules", rulesStart);
+
   lap("total", started);
-  return { cluster: "devnet", decoded, simulation, timingsMs };
+  const result: Analysis = { cluster: "devnet", decoded, simulation, verdict, timingsMs };
+  if (options.userAddress) result.userAddress = options.userAddress;
+  return result;
 }

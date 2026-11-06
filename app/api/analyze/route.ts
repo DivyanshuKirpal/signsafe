@@ -1,8 +1,8 @@
 /**
  * POST /api/analyze
  *
- * Decodes the transaction and simulates it on devnet (M2). Rules and verdict
- * (M3) and the AI explanation (M5) are added to the same pipeline later.
+ * Decodes the transaction, simulates it on devnet and applies the risk rules
+ * (verdict). The AI explanation (M5) is added to the same pipeline later.
  */
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
@@ -65,13 +65,13 @@ export async function POST(request: Request): Promise<Response> {
       ? jsonError(400, "INVALID_ADDRESS", "The address you entered is not a valid Solana address.")
       : jsonError(400, "BAD_REQUEST", 'Expected { "input": { "kind": "base64", "tx": "..." } }.');
   }
-  const { tx } = parsed.data.input;
+  const { tx, userAddress } = parsed.data.input;
 
   try {
     const analysis = await analyzeTransaction(tx, {
       rpc: getRpc(),
       log: (message) => console.warn(`[analyze ${requestId}] input ${inputTag(tx)}: ${message}`),
-    });
+    }, { userAddress: userAddress || undefined });
     const response: AnalyzeResponse = { requestId, ...analysis };
     return Response.json(toJsonSafe(response));
   } catch (error) {

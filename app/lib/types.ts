@@ -179,6 +179,31 @@ export interface SimulationError {
   programId?: string;
 }
 
+/**
+ * An account's state before the transaction, as fetched for the comparison.
+ * Rules use it for permission checks (the token account's real owner and
+ * balance), never the user's address. Amounts are raw integers as strings.
+ */
+export interface AccountState {
+  address: string;
+  exists: boolean;
+  lamports?: string;
+  /** Owning program. */
+  owner?: string;
+  token?: {
+    program: "token" | "token2022";
+    mint: string;
+    /** The wallet that controls the token account. */
+    owner: string;
+    amount: string;
+    decimals: number;
+    delegate: string | null;
+    delegatedAmount: string;
+    closeAuthority: string | null;
+  };
+  mint?: { decimals: number; supply: string; mintAuthority: string | null; freezeAuthority: string | null };
+}
+
 export interface SimulationResult {
   /** False when the simulation could not be attempted (no RPC, RPC down, not devnet). */
   ran: boolean;
@@ -196,20 +221,78 @@ export interface SimulationResult {
   watched: WatchedAccount[];
   /** Accounts the transaction writes to that were left out of the comparison (cap). */
   notWatched: string[];
+  /** State before the transaction of every account fetched (empty if the RPC was not reached). */
+  preState: AccountState[];
   slots?: { preState?: string; simulation?: string };
   /** Which configured endpoint answered. URLs are never exposed. */
   rpcEndpoint?: "primary" | "fallback";
+}
+
+export type VerdictLevel = "LOW_RISK" | "CAUTION" | "DANGER" | "UNKNOWN";
+export type Severity = "info" | "caution" | "danger";
+
+export type RuleId =
+  | "R-APPROVE"
+  | "R-DELEGATE-STATE"
+  | "R-SET-AUTHORITY"
+  | "R-ASSIGN"
+  | "R-OUTFLOW"
+  | "R-CLOSE-ACCOUNT"
+  | "R-UNKNOWN-PROGRAM"
+  | "R-DURABLE-NONCE"
+  | "R-HIGH-FEE"
+  | "R-SIM-FAILED"
+  | "R-UNRESOLVED"
+  | "R-MEMO";
+
+/** What a flag is based on: an instruction, an account change, or a gap in the check. */
+export type FlagSource =
+  | { type: "instruction"; path: string; inner: boolean; summary: string }
+  | { type: "stateChange"; address: string; changeKind: StateChangeKind; description: string }
+  | { type: "decodeWarning"; code: DecodeWarningCode; message: string }
+  | { type: "simulation"; code: SimulationErrorCode | "OK"; message: string }
+  /** A transaction-level setting that is not an instruction (for example the v1 fee config). */
+  | { type: "transaction"; description: string };
+
+export interface RiskFlag {
+  /** The main rule. When evidence from several rules was merged, the others are in relatedRuleIds. */
+  ruleId: RuleId;
+  relatedRuleIds?: RuleId[];
+  severity: Severity;
+  /** Written by our code, not by the AI. */
+  title: string;
+  detail: string;
+  /** The account the problem is about, when there is one. */
+  account?: string;
+  /** Short facts (addresses, amounts) behind the flag. */
+  evidence: Record<string, string>;
+  /** The instructions and account changes that triggered it. */
+  sources: FlagSource[];
+}
+
+export interface Verdict {
+  level: VerdictLevel;
+  /** Fixed UI label for the level. Never says "safe". */
+  label: string;
+  /** One line written by our code. */
+  reason: string;
+  /** False when part of the transaction could not be checked (simulation or decoding gaps). */
+  complete: boolean;
+  flags: RiskFlag[];
 }
 
 export interface ApiError {
   error: { code: string; message: string };
 }
 
-/** Verdict (M3) and explanation (M5) are added later. */
+/** The explanation (M5) is added later. */
 export interface AnalyzeResponse {
   requestId: string;
   cluster: "devnet";
   decoded: DecodedTx;
   simulation: SimulationResult;
+  verdict: Verdict;
+  /** The optional "your address" echoed back; it only personalises wording, never the verdict. */
+  userAddress?: string;
   timingsMs: Record<string, number>;
 }

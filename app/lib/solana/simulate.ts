@@ -22,7 +22,7 @@ import {
 } from "@solana/kit";
 import { LIMITS } from "../config";
 import type { DecodedIx, DecodedTx, SimulationResult, WatchedAccount } from "../types";
-import { type AccountSnapshot, toSnapshot } from "./accounts";
+import { type AccountSnapshot, toAccountState, toSnapshot } from "./accounts";
 import { describeInstruction } from "./describe";
 import { shortAddress } from "./format";
 import { decodeInnerInstructions } from "./inner";
@@ -138,6 +138,9 @@ export async function simulateDecoded(
     candidates.push(...mints.map((m) => ({ address: m, roles: ["mint" as const] })));
   }
 
+  // Pre-transaction state, exposed for the rules (owner and balance checks).
+  const preState = [...pre].map(([a, snapshot]) => toAccountState(a, snapshot));
+
   // 3. Cap.
   const { watched, dropped } = selectWatched(candidates, decoded.signers, pre, LIMITS.maxWatchedAccounts);
   const warnings = [...decoded.warnings];
@@ -173,8 +176,9 @@ export async function simulateDecoded(
     const refused = serverMessage(error);
     if (refused === undefined) throw unavailable(error);
     // The node answered but refused the transaction (for example a deactivated lookup table).
+    const noPost = new Map<string, AccountSnapshot | null>();
     return {
-      decoded: { ...decoded, warnings },
+      decoded: { ...decoded, instructions: decoded.instructions.map((ix) => attachTokenInfo(ix, pre, noPost)), warnings },
       simulation: {
         ran: true,
         ok: false,
@@ -185,6 +189,7 @@ export async function simulateDecoded(
         changes: [],
         watched: watched.map((w) => ({ address: w.address, roles: w.roles, existedBefore: pre.get(w.address) != null, existsAfter: null })),
         notWatched,
+        preState,
         slots: { preState: preSlot?.toString() },
       },
     };
@@ -225,6 +230,7 @@ export async function simulateDecoded(
       changes,
       watched: watchedOut,
       notWatched,
+      preState,
       slots: { preState: preSlot?.toString(), simulation: simSlot.toString() },
     },
   };

@@ -4,8 +4,9 @@
  * and no keys are needed (signature checks are off in simulation).
  *
  *   npm run live:check              run the cases and check expectations
- *   npm run live:check -- --record  also save the raw RPC traffic as fixtures
- *                                   in tests/fixtures/live/ for offline tests
+ *   npm run live:check -- --record  also save the raw RPC traffic of cases that
+ *                                   have no fixture yet in tests/fixtures/live/
+ *   npm run live:check -- --record --overwrite   re-record every fixture
  *
  * Cases:
  *   sol-transfer        0.01 SOL from a funded devnet wallet to a fresh address
@@ -13,10 +14,12 @@
  *   lookup-table        v0 transfer whose recipient is loaded from an existing
  *                       devnet address lookup table
  *   unfunded-fee-payer  fee payer that does not exist on devnet (simulation fails)
+ *   approval-unfunded-fee-payer  unlimited Approve with a non-existent fee payer:
+ *                       simulation fails, but the verdict must stay Danger
  *
  * The RPC URL is read from .env.local and never printed.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import {
   address,
   type Address,
@@ -37,6 +40,8 @@ import type { AnalyzeResponse } from "../app/lib/types";
 import { buildTxBase64 } from "../tests/helpers/build-tx";
 
 const RECORD = process.argv.includes("--record");
+/** Without --overwrite, existing fixtures are kept so earlier recordings stay stable. */
+const OVERWRITE = process.argv.includes("--overwrite");
 const FIXTURE_DIR = "tests/fixtures/live";
 /** Circle's devnet USDC mint: widely held on devnet, so funded holders exist. */
 const USDC_DEVNET = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
@@ -160,7 +165,8 @@ async function runCase(
   const client = newRpc(sink);
   const analysis = await analyzeTransaction(txBase64, { rpc: client, log: (m) => console.log(`  [log] ${m}`) });
   const checks = expectations(analysis);
-  if (RECORD) {
+  const fixturePath = `${FIXTURE_DIR}/${name}.json`;
+  if (RECORD && (OVERWRITE || !existsSync(fixturePath))) {
     mkdirSync(FIXTURE_DIR, { recursive: true });
     const fixture = {
       case: name,
@@ -171,7 +177,8 @@ async function runCase(
       txBase64,
       exchanges: sink,
     };
-    writeFileSync(`${FIXTURE_DIR}/${name}.json`, toFixtureJson(fixture) + "\n");
+    writeFileSync(fixturePath, toFixtureJson(fixture) + "\n");
+    console.log(`  recorded ${fixturePath}`);
   }
   return { name, analysis, checks };
 }
@@ -187,6 +194,9 @@ function report(result: CaseResult): void {
       (simulation.unitsConsumed !== undefined ? ` units=${simulation.unitsConsumed}` : ""),
   );
   if (simulation.error) console.log(`  error: [${simulation.error.code}] ${simulation.error.userMessage}`);
+  const { verdict } = result.analysis;
+  console.log(`  verdict: ${verdict.label}${verdict.complete ? "" : " (check incomplete)"}`);
+  for (const flag of verdict.flags) console.log(`    [${flag.severity}] ${flag.ruleId}${flag.relatedRuleIds ? " + " + flag.relatedRuleIds.join(", ") : ""}: ${flag.title}`);
   for (const change of simulation.changes) {
     const t = describeChange(change);
     console.log(
@@ -243,6 +253,7 @@ async function main(): Promise<void> {
           { label: "sender delta = -(0.01 SOL + fee) and labelled as including the fee", pass: sender?.delta === (-(amount + fee)).toString() && sender?.includesFeeLamports === fee.toString() },
           { label: "recipient delta = +0.01 SOL", pass: receiver?.delta === amount.toString() },
           { label: "recipient shown as a new account", pass: a.simulation.changes.some((c) => c.address === recipient && c.kind === "created") },
+          { label: "verdict: No known risks found", pass: a.verdict.level === "LOW_RISK" && a.verdict.flags.length === 0 },
         ];
       },
     ),
@@ -261,6 +272,13 @@ async function main(): Promise<void> {
           { label: "allowance becomes u64 max (unlimited)", pass: d?.allowanceAfter === U64_MAX.toString() },
           { label: "token balance unchanged (no token change reported)", pass: !a.simulation.changes.some((c) => c.kind === "token") },
           { label: "decimals looked up for the approve instruction", pass: typeof a.decoded.instructions[0].token?.decimals === "number" },
+          { label: "verdict: Danger", pass: a.verdict.level === "DANGER" },
+          {
+            label: "one approval flag for the token account, merging instruction and state evidence",
+            pass:
+              a.verdict.flags.filter((f) => f.account === tokenAccount).length === 1 &&
+              a.verdict.flags.some((f) => f.ruleId === "R-APPROVE" && f.relatedRuleIds?.includes("R-DELEGATE-STATE") && f.sources.length === 2),
+          },
         ];
       },
     ),
@@ -281,6 +299,7 @@ async function main(): Promise<void> {
           { label: "recipient address resolved from the table", pass: a.decoded.instructions[0].accounts.destination === lookup.recipient },
           { label: "simulation succeeded", pass: a.simulation.ok },
           { label: "recipient balance change detected", pass: a.simulation.changes.some((c) => c.address === lookup.recipient && c.kind === "sol" && c.delta === amount.toString()) },
+          { label: "verdict: No known risks found", pass: a.verdict.level === "LOW_RISK" },
         ],
       ),
     );
@@ -300,6 +319,7 @@ async function main(): Promise<void> {
           { label: "simulation could not complete", pass: !a.simulation.ok },
           { label: "error mapped to LOOKUP_TABLE_INVALID", pass: a.simulation.error?.code === "LOOKUP_TABLE_INVALID" },
           { label: "no state changes claimed", pass: a.simulation.changes.length === 0 },
+          { label: "verdict: Could not fully check", pass: a.verdict.level === "UNKNOWN" && !a.verdict.complete },
         ],
       ),
     );
@@ -317,7 +337,25 @@ async function main(): Promise<void> {
         { label: "simulation ran and failed", pass: a.simulation.ran && !a.simulation.ok },
         { label: "error mapped to FEE_PAYER_UNFUNDED", pass: a.simulation.error?.code === "FEE_PAYER_UNFUNDED" },
         { label: "no state changes claimed", pass: a.simulation.changes.length === 0 },
+        { label: "verdict: Could not fully check", pass: a.verdict.level === "UNKNOWN" && !a.verdict.complete },
       ],
+    ),
+  );
+
+  results.push(
+    await runCase(
+      "approval-unfunded-fee-payer",
+      "unlimited Approve on the existing USDC token account, but the fee payer does not exist on devnet (simulation fails)",
+      buildTxBase64([getApproveInstruction({ source: tokenAccount, delegate, owner, amount: U64_MAX })], { feePayer: ghost }),
+      (a) => {
+        const approval = a.verdict.flags.find((f) => f.ruleId === "R-APPROVE");
+        return [
+          { label: "simulation ran and failed", pass: a.simulation.ran && !a.simulation.ok },
+          { label: "pre-transaction owner of the token account read from devnet", pass: approval?.evidence.owner === wallet },
+          { label: "verdict stays Danger (independent instruction evidence)", pass: a.verdict.level === "DANGER" },
+          { label: "incomplete check still reported", pass: !a.verdict.complete && a.verdict.flags.some((f) => f.ruleId === "R-SIM-FAILED") },
+        ];
+      },
     ),
   );
 

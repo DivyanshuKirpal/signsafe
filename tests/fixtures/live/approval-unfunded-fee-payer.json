@@ -1,0 +1,291 @@
+{
+  "case": "approval-unfunded-fee-payer",
+  "description": "unlimited Approve on the existing USDC token account, but the fee payer does not exist on devnet (simulation fails)",
+  "source": "live devnet RPC, recorded by scripts/live-check.ts",
+  "endpoint": "primary",
+  "recordedAt": "2026-11-06T19:59:13.160Z",
+  "txBase64": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgECBXXEEYyG032yJCEismEYnf4u6FZC3xNTNUemvbsLC9Yf+KUSPEk4OZkxSz3bPISrf0upK28mF0hC/shDccRhNaB7eMDubSejrLlRqRQG67KbiqlHL5jaQTkneyHRHXkIwjqo3k7TgulvaArzxooyGZmtdXlwPhgfrEzPKRhv5IfXBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKnMSQ6SjNLjhzuzQ/yV2jMXnKYPTb9GwsNukSmdVdTmuQEEAwIDAQkE//////////8=",
+  "exchanges": [
+    {
+      "method": "getGenesisHash",
+      "params": [],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+        "id": "29"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "8vi7553r3cc3xvH9PrfEx3jpd6ZhBbwTEwzev7ETZiez",
+          "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+          "9JywdjbDkb8a3nqcouuLV8TDZ2UA8whwpMN5Eett6b2h"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519411969"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            null,
+            {
+              "lamports": {
+                "$bigint": "506657270258"
+              },
+              "data": [
+                "",
+                "base64"
+              ],
+              "owner": "11111111111111111111111111111111",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "0"
+              }
+            },
+            {
+              "lamports": {
+                "$bigint": "5102039280"
+              },
+              "data": {
+                "program": "spl-token",
+                "parsed": {
+                  "info": {
+                    "isNative": false,
+                    "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+                    "owner": "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+                    "state": "initialized",
+                    "tokenAmount": {
+                      "amount": "9887077962885340000",
+                      "decimals": {
+                        "$bigint": "6"
+                      },
+                      "uiAmount": 9887077962885.34,
+                      "uiAmountString": "9887077962885.34"
+                    }
+                  },
+                  "type": "account"
+                },
+                "space": {
+                  "$bigint": "165"
+                }
+              },
+              "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "165"
+              }
+            }
+          ]
+        },
+        "id": "30"
+      }
+    },
+    {
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+        ],
+        {
+          "encoding": "jsonParsed",
+          "commitment": "confirmed"
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": {
+              "$bigint": "519411972"
+            },
+            "apiVersion": "4.3.0-alpha.2"
+          },
+          "value": [
+            {
+              "lamports": {
+                "$bigint": "484525905289"
+              },
+              "data": {
+                "program": "spl-token",
+                "parsed": {
+                  "info": {
+                    "decimals": {
+                      "$bigint": "6"
+                    },
+                    "freezeAuthority": "CJtyoKSLrktozQzjERTiK3btQtiTK3nN4QrqGHLidyCT",
+                    "isInitialized": true,
+                    "mintAuthority": "GrNg1XM2ctzeE2mXxXCfhcTUbejM8Z4z4wNVTy2FjMEz",
+                    "supply": "16286767313158265378"
+                  },
+                  "type": "mint"
+                },
+                "space": {
+                  "$bigint": "82"
+                }
+              },
+              "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              "executable": false,
+              "rentEpoch": {
+                "$bigint": "18446744073709551615"
+              },
+              "space": {
+                "$bigint": "82"
+              }
+            }
+          ]
+        },
+        "id": "31"
+      }
+    },
+    {
+      "method": "simulateTransaction",
+      "params": [
+        "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgECBXXEEYyG032yJCEismEYnf4u6FZC3xNTNUemvbsLC9Yf+KUSPEk4OZkxSz3bPISrf0upK28mF0hC/shDccRhNaB7eMDubSejrLlRqRQG67KbiqlHL5jaQTkneyHRHXkIwjqo3k7TgulvaArzxooyGZmtdXlwPhgfrEzPKRhv5IfXBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKnMSQ6SjNLjhzuzQ/yV2jMXnKYPTb9GwsNukSmdVdTmuQEEAwIDAQkE//////////8=",
+        {
+          "encoding": "base64",
+          "sigVerify": false,
+          "replaceRecentBlockhash": true,
+          "innerInstructions": true,
+          "commitment": "confirmed",
+          "accounts": {
+            "addresses": [
+              "8vi7553r3cc3xvH9PrfEx3jpd6ZhBbwTEwzev7ETZiez",
+              "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+              "9JywdjbDkb8a3nqcouuLV8TDZ2UA8whwpMN5Eett6b2h",
+              "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+            ],
+            "encoding": "jsonParsed"
+          }
+        }
+      ],
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.4.0-beta.0",
+            "slot": {
+              "$bigint": "519411975"
+            }
+          },
+          "value": {
+            "accounts": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "err": "AccountNotFound",
+            "fee": null,
+            "innerInstructions": null,
+            "loadedAccountsDataSize": {
+              "$bigint": "0"
+            },
+            "loadedAddresses": {
+              "readonly": [],
+              "writable": []
+            },
+            "logs": [],
+            "postBalances": [
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "506657270258"
+              },
+              {
+                "$bigint": "5102039280"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "20428277856"
+              }
+            ],
+            "postTokenBalances": [
+              {
+                "accountIndex": {
+                  "$bigint": "2"
+                },
+                "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+                "owner": "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+                "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "uiTokenAmount": {
+                  "amount": "9887077962885340000",
+                  "decimals": {
+                    "$bigint": "6"
+                  },
+                  "uiAmount": 9887077962885.34,
+                  "uiAmountString": "9887077962885.34"
+                }
+              }
+            ],
+            "preBalances": [
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "506657270258"
+              },
+              {
+                "$bigint": "5102039280"
+              },
+              {
+                "$bigint": "0"
+              },
+              {
+                "$bigint": "20428277856"
+              }
+            ],
+            "preTokenBalances": [
+              {
+                "accountIndex": {
+                  "$bigint": "2"
+                },
+                "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+                "owner": "Hjc6jdakkNx83LTEfsMr8XEj5LjrSENiPLehSSpbzVRR",
+                "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "uiTokenAmount": {
+                  "amount": "9887077962885340000",
+                  "decimals": {
+                    "$bigint": "6"
+                  },
+                  "uiAmount": 9887077962885.34,
+                  "uiAmountString": "9887077962885.34"
+                }
+              }
+            ],
+            "replacementBlockhash": {
+              "blockhash": "3FRTZr3DXvxBAmgbnhxPwyfj32vZKZKR6P8eJYiQGWXn",
+              "lastValidBlockHeight": {
+                "$bigint": "506563590"
+              }
+            },
+            "returnData": null,
+            "unitsConsumed": {
+              "$bigint": "0"
+            }
+          }
+        },
+        "id": "32"
+      }
+    }
+  ]
+}

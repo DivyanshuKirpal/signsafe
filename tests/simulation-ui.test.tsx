@@ -26,6 +26,7 @@ const base: SimulationResult = {
     { address: TOKEN_ACCOUNT, roles: ["writable"], existedBefore: true, existsAfter: true },
   ],
   notWatched: [],
+  preState: [],
 };
 
 describe("SimulationPanel", () => {

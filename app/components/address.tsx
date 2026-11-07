@@ -43,7 +43,7 @@ export function Address({ value, copy = false }: { value: string; copy?: boolean
           type="button"
           onClick={copyValue}
           className="cursor-pointer rounded border border-border px-1 text-[10px] leading-4 text-muted hover:bg-cream"
-          aria-label={`Copy address ${value}`}
+          aria-label={`${copied ? "Copied" : "Copy"} address ${value}`}
         >
           {copied ? "Copied" : "Copy"}
         </button>

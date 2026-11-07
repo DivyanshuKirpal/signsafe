@@ -59,7 +59,8 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 ## Partially implemented work
 - M6 started Sat 7 Nov 14:30 IST.
   - Done and verified (15:00): `fixtures:save` (live, `--ai`, `--offline`), `data/fixtures/` for S1-S8 captured live on devnet at 14:42 IST, **S3 and S8 with accepted Gemini explanations** (model version gemini-3.6-flash); replay route and page (banner above the verdict); streamed step progress with the verdict shown before the explanation; Try again, rate-limit countdown, raw JSON. Replays verified after a restart of the production server with the RPC and Gemini unreachable (byte-identical to the saved files).
-  - Next: real-browser review (desktop and 375 px), manual QA list, README and learning notes.
+  - Done and verified (15:20): real-browser review in Chrome (Playwright + axe-core, outside the repo) at 375 px and 1280 px, dark and light, on two production servers (live devnet with AI off; RPC and Gemini unreachable): 64 checks passed after fixing 4 problems it found. Results, fixes and the remaining human checks are in `docs/QA.md`. `samples:print` now also prints a long-memo transaction.
+  - Next: README and learning notes, then the M6 checkpoint.
 
 ## Next three steps (once M6 is approved)
 1. UI states and accessibility pass (keyboard, 375 px, contrast, loading per step), user browser check of the result page.

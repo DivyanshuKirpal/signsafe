@@ -24,7 +24,8 @@ type State =
   | { status: "success"; result: AnalyzeResponse; tx: string; scenarioId?: string }
   | ErrorState;
 
-type Outcome = { ok: true; result: AnalyzeResponse } | { ok: false; message: string; retryAt?: number };
+/** `stageShown`: the verdict was already on screen before the full result arrived. */
+type Outcome = { ok: true; result: AnalyzeResponse; stageShown: boolean } | { ok: false; message: string; retryAt?: number };
 
 /** The server's own deadline is 35 s (AI attempts included). */
 const REQUEST_TIMEOUT_MS = 40_000;
@@ -56,7 +57,20 @@ export function Checker() {
   const [examples, setExamples] = useState<SavedResultSummary[]>([]);
   const [now, setNow] = useState(0);
   const [announcement, setAnnouncement] = useState("");
+  const [scrollTo, setScrollTo] = useState<{ target: "status" | "result" } | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const statusRef = useRef<HTMLDivElement | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null);
+
+  // Bring what just changed into view: the progress or error box, then the verdict.
+  // On a phone the result is far below the buttons; on a laptop it starts near the fold.
+  useEffect(() => {
+    if (!scrollTo) return;
+    const element = scrollTo.target === "result" ? resultRef.current : statusRef.current;
+    if (!element || typeof element.scrollIntoView !== "function") return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({ block: scrollTo.target === "result" ? "start" : "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+  }, [scrollTo]);
 
   // Saved results for "Replay a saved result" (an empty list when the server has none).
   useEffect(() => {
@@ -85,6 +99,7 @@ export function Checker() {
     setNow(started);
     setAnnouncement("");
     setState({ status: "loading", phase, step: null, stage: null, startedAt: started });
+    setScrollTo({ target: "status" });
   }
 
   /**
@@ -107,9 +122,10 @@ export function Checker() {
       });
       if (!res.ok) return { ok: false, ...(await readError(res)) };
       if (!(res.headers.get("content-type") ?? "").includes("ndjson") || !res.body) {
-        return { ok: true, result: (await res.json()) as AnalyzeResponse }; // cached answers come as plain JSON
+        // Cached answers come as plain JSON.
+        return { ok: true, result: (await res.json()) as AnalyzeResponse, stageShown: false };
       }
-      const out: { result?: AnalyzeResponse; error?: string } = {};
+      const out: { result?: AnalyzeResponse; error?: string; stageShown: boolean } = { stageShown: false };
       await readNdjson<AnalyzeStreamEvent>(res.body, (event) => {
         if (event.type === "result") out.result = event.result;
         else if (event.type === "error") out.error = event.error.message;
@@ -117,9 +133,13 @@ export function Checker() {
           setState((s) =>
             s.status !== "loading" ? s : event.type === "step" ? { ...s, phase: "check", step: event.step } : { ...s, stage: event.result },
           );
+          if (event.type === "verdict") {
+            out.stageShown = true;
+            setScrollTo({ target: "result" });
+          }
         }
       });
-      if (out.result) return { ok: true, result: out.result };
+      if (out.result) return { ok: true, result: out.result, stageShown: out.stageShown };
       return { ok: false, message: out.error ?? "The check stopped before it finished. Please try again." };
     } catch {
       return { ok: false, message: NETWORK_MESSAGE };
@@ -134,7 +154,10 @@ export function Checker() {
     controllerRef.current = controller;
     const isCurrent = () => controllerRef.current === controller;
     const fail = (title: string, message: string, extra: Partial<ErrorState> = {}) => {
-      if (isCurrent()) setState({ status: "error", title, message, retry: action, ...extra });
+      if (!isCurrent()) return;
+      setNow(Date.now()); // so a rate-limit countdown starts from the server's number
+      setState({ status: "error", title, message, retry: action, ...extra });
+      setScrollTo({ target: "status" });
     };
 
     if (action.kind === "replay") {
@@ -153,6 +176,7 @@ export function Checker() {
         setState({ status: "success", result: saved.result, tx: saved.tx, scenarioId: action.id });
         setReveal(saved.reveal ?? null);
         setAnnouncement(`Saved result loaded, not a new check: ${saved.result.verdict.label}.`);
+        setScrollTo({ target: "result" });
       } catch {
         fail("Could not load the saved result", "Could not reach the SignSafe server to load the saved result.");
       }
@@ -207,6 +231,7 @@ export function Checker() {
     }
     setState({ status: "success", result: outcome.result, tx, scenarioId });
     setAnnouncement(`Check finished: ${outcome.result.verdict.label}.`);
+    if (!outcome.stageShown) setScrollTo({ target: "result" });
     if (action.kind === "scenario") {
       // Only now, after the pipeline has given its verdict, ask what the scenario really was.
       const revealed: unknown = await fetch(`/api/scenarios?reveal=${encodeURIComponent(action.scenario.id)}`)
@@ -251,29 +276,33 @@ export function Checker() {
       <p role="status" className="sr-only">
         {announcement}
       </p>
-      {state.status === "loading" && <StepProgress phase={state.phase} step={state.step} elapsedMs={now - state.startedAt} />}
-      {state.status === "error" && (
-        <ErrorBox
-          error={state}
-          now={now}
-          replayCode={examples.find((e) => e.id === state.replayId)?.code}
-          onRetry={() => void run(state.retry)}
-          onReplay={(id) => void run({ kind: "replay", id })}
-        />
-      )}
+      <div ref={statusRef} className="scroll-mt-4 empty:hidden">
+        {state.status === "loading" && <StepProgress phase={state.phase} step={state.step} elapsedMs={now - state.startedAt} />}
+        {state.status === "error" && (
+          <ErrorBox
+            error={state}
+            now={now}
+            replayCode={examples.find((e) => e.id === state.replayId)?.code}
+            onRetry={() => void run(state.retry)}
+            onReplay={(id) => void run({ kind: "replay", id })}
+          />
+        )}
+      </div>
 
-      {view && (
-        <ResultView
-          stage={view.stage}
-          result={view.result}
-          reveal={reveal}
-          busy={busy}
-          onCheckAgain={() => {
-            if (state.status === "success") void run({ kind: "check", tx: state.tx, fresh: true, scenarioId: state.scenarioId });
-          }}
-          replayOffer={offerId ? { code: offerId.code, onReplay: () => void run({ kind: "replay", id: offerId.id }) } : null}
-        />
-      )}
+      <div ref={resultRef} className="scroll-mt-4 empty:hidden">
+        {view && (
+          <ResultView
+            stage={view.stage}
+            result={view.result}
+            reveal={reveal}
+            busy={busy}
+            onCheckAgain={() => {
+              if (state.status === "success") void run({ kind: "check", tx: state.tx, fresh: true, scenarioId: state.scenarioId });
+            }}
+            replayOffer={offerId ? { code: offerId.code, onReplay: () => void run({ kind: "replay", id: offerId.id }) } : null}
+          />
+        )}
+      </div>
     </div>
   );
 }

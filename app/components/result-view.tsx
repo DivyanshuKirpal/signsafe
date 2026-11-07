@@ -29,7 +29,7 @@ export function ResultView({ stage, result, reveal, busy, onCheckAgain, replayOf
       <div className="space-y-6">
         {result?.replay && <ReplayBanner replay={result.replay} />}
         {/* The verdict (rules) and its explanation side by side on wide screens, stacked on phones. */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 md:items-start">
           <VerdictCard verdict={stage.verdict} saved={Boolean(result?.replay)} />
           {result ? <ExplanationPanel explanation={result.explanation} /> : <ExplanationPending />}
         </div>

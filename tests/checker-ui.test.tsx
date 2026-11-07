@@ -148,6 +148,25 @@ describe("saved result replay", () => {
     expect((screen.getByLabelText(/Transaction \(base64/) as HTMLTextAreaElement).value).toBe(S3.txBase64);
   });
 
+  test("the result is scrolled into view when it arrives (the buttons sit above it)", async () => {
+    const scrolled: Element[] = [];
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value(this: HTMLElement) {
+        scrolled.push(this);
+      },
+    });
+    try {
+      mockFetch(() => json(RESULT));
+      render(<Checker />);
+      fireEvent.click(await screen.findByRole("button", { name: /S3 saved/ }));
+      await screen.findByRole("heading", { name: /^Saved result from / });
+      await waitFor(() => expect(scrolled.at(-1)?.querySelector("#replay-heading")).toBeTruthy());
+    } finally {
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   test("Check again on a replay runs a fresh check of the saved transaction", async () => {
     mockFetch(() => json(RESULT));
     render(<Checker />);

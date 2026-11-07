@@ -40,6 +40,7 @@ async function showResult(tx: string, response: AnalyzeResponse) {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "/api/scenarios") return new Response(JSON.stringify({ ready: false, scenarios: [] }));
+      if (url === "/api/examples") return new Response(JSON.stringify({ examples: [] }));
       bodies.push(JSON.parse(String(init?.body)));
       return new Response(JSON.stringify(response), { status: 200 });
     }),
@@ -113,12 +114,12 @@ describe("pages", () => {
     const bodies = await showResult(tx, response);
     expect(screen.getByRole("heading", { name: "AI explanation" })).toBeTruthy();
     expect(screen.getByText(/model gemini-3.6-flash/)).toBeTruthy();
-    expect(screen.getByText(/Saved result from/)).toBeTruthy();
+    expect(screen.getByText(/Cached result from/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await screen.findByRole("heading", { name: response.verdict.label });
     expect(bodies).toEqual([
-      { input: { kind: "base64", tx } },
-      { input: { kind: "base64", tx }, fresh: true },
+      { input: { kind: "base64", tx }, stream: true },
+      { input: { kind: "base64", tx }, fresh: true, stream: true },
     ]);
   });
 });

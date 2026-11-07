@@ -1,0 +1,187 @@
+{
+  "kind": "signsafe-saved-result",
+  "format": 1,
+  "scenarioId": "s1-normal-payment",
+  "capturedAt": "2026-11-07T09:12:14.361Z",
+  "cluster": "devnet",
+  "devnetData": "live",
+  "devnetDataAt": "2026-11-07T09:12:14.361Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAzbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJB0UwPx1wxSF+bV8wzUd18ZowZAPVbxgpGdQlVv2pdF4MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUR3rcbb47M4Rk0nMTj1bAotIrtnRvVnuQOMAv/ZSXhAQICAAEMAgAAAICWmAAAAAAAAA==",
+  "response": {
+    "requestId": "6ba2052a-1638-434c-b814-e495ad286b0a",
+    "cluster": "devnet",
+    "decoded": {
+      "version": "0",
+      "sizeBytes": 217,
+      "feePayer": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+      "signers": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "writable": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+        "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y"
+      ],
+      "signatures": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "present": false
+        }
+      ],
+      "accountKeys": [
+        {
+          "index": 0,
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "signer": true,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 1,
+          "address": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+          "signer": false,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 2,
+          "address": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false,
+          "source": "static",
+          "resolved": true
+        }
+      ],
+      "lifetimeToken": "2RFNE5FfBvWdbzv7MhbDg227HfuhFWeGbTpzMaP92Toe",
+      "usesDurableNonce": false,
+      "lookupTables": [],
+      "budget": {
+        "source": "none"
+      },
+      "instructions": [
+        {
+          "path": "0",
+          "programId": "11111111111111111111111111111111",
+          "programName": "System Program",
+          "known": true,
+          "inner": false,
+          "accountCount": 2,
+          "dataLength": 12,
+          "action": "transferSol",
+          "accounts": {
+            "source": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+            "destination": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y"
+          },
+          "args": {
+            "amount": "10000000"
+          },
+          "summary": "Send 0.01 SOL from 4gow...pj9r to F61U...AG9Y."
+        }
+      ],
+      "warnings": []
+    },
+    "simulation": {
+      "ran": true,
+      "ok": true,
+      "feeLamports": "5000",
+      "unitsConsumed": 150,
+      "logs": [
+        "Program 11111111111111111111111111111111 invoke [1]",
+        "Program 11111111111111111111111111111111 success"
+      ],
+      "logsTruncated": false,
+      "innerInstructions": [],
+      "changes": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "sol",
+          "before": "50000000",
+          "after": "39995000",
+          "delta": "-10005000",
+          "includesFeeLamports": "5000"
+        },
+        {
+          "address": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+          "kind": "created",
+          "before": null,
+          "after": "11111111111111111111111111111111"
+        },
+        {
+          "address": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+          "kind": "sol",
+          "before": "0",
+          "after": "10000000",
+          "delta": "10000000"
+        }
+      ],
+      "watched": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "roles": [
+            "feePayer",
+            "signer",
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        },
+        {
+          "address": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+          "roles": [
+            "writable"
+          ],
+          "existedBefore": false,
+          "existsAfter": true
+        }
+      ],
+      "notWatched": [],
+      "preState": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "exists": true,
+          "lamports": "50000000",
+          "owner": "11111111111111111111111111111111"
+        },
+        {
+          "address": "F61UjRaRpjAcnGEZCy61JSVbZbXojZYggsNTebULAG9Y",
+          "exists": false
+        }
+      ],
+      "slots": {
+        "preState": "519610767",
+        "simulation": "519610769"
+      },
+      "rpcEndpoint": "primary"
+    },
+    "verdict": {
+      "level": "LOW_RISK",
+      "label": "No known risks found",
+      "reason": "The decoded instructions and the simulated account changes match none of SignSafe's risk rules.",
+      "complete": true,
+      "flags": []
+    },
+    "explanation": {
+      "source": "template",
+      "summary": "SignSafe's rules found no known risks in this transaction.",
+      "points": [
+        "It asks to send 0.01 SOL from 4gow...pj9r to F61U...AG9Y."
+      ],
+      "advice": "Check that the amounts and addresses match what you expect before you sign.",
+      "notice": {
+        "code": "AI_OFF",
+        "message": "AI explanations are switched off on this server."
+      }
+    },
+    "timingsMs": {
+      "decode": 3,
+      "simulate": 813,
+      "rules": 1,
+      "explain": 1,
+      "total": 818
+    },
+    "cache": {
+      "hit": false
+    }
+  }
+}

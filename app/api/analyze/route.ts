@@ -1,8 +1,12 @@
 /**
- * POST /api/analyze  { input: { kind: "base64", tx, userAddress? }, fresh? }
+ * POST /api/analyze  { input: { kind: "base64", tx, userAddress? }, fresh?, stream? }
  *
  * decode -> simulate on devnet -> rules and verdict -> explanation (AI or built-in).
  *
+ * - Answer: one JSON AnalyzeResponse, or with "stream": true NDJSON lines
+ *   (AnalyzeStreamEvent): each step as it starts, the verdict as soon as the
+ *   rules have run, then the full result. Bad requests, rate limits and cached
+ *   answers are always plain JSON.
  * - Cache (ARCHITECTURE 9.7): results are kept 10 minutes by sha256(tx + userAddress);
  *   "fresh": true ("Check again") skips the cache. Cached answers say so (cache.hit).
  * - Rate limit: 10 fresh analyses per minute per client IP; cached answers are free.
@@ -12,13 +16,13 @@
  */
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
-import { analyzeTransaction } from "@/app/lib/analyze";
+import { type AnalyzeProgress, analyzeTransaction } from "@/app/lib/analyze";
 import { AI, LIMITS } from "@/app/lib/config";
 import { analysisKey, getAnalysisCache, getExplainer, getRateLimiter, isCacheable } from "@/app/lib/server-state";
 import { DecodeError, normalizeBase64Input } from "@/app/lib/solana/decode";
 import { redactSecrets } from "@/app/lib/solana/rpc";
 import { getServerRpc } from "@/app/lib/solana/server-rpc";
-import type { AnalyzeResponse } from "@/app/lib/types";
+import type { AnalyzeResponse, AnalyzeStreamEvent } from "@/app/lib/types";
 import { toJsonSafe } from "@/app/lib/util/bigint-json";
 import { inputTag, jsonError } from "@/app/lib/util/errors";
 import { clientKey } from "@/app/lib/util/rate-limit";
@@ -43,7 +47,59 @@ const RequestSchema = z.object({
   ]),
   /** "Check again": skip the cached result and the cached explanation. */
   fresh: z.boolean().optional(),
+  /** Stream progress as NDJSON (AnalyzeStreamEvent lines) instead of one JSON answer. */
+  stream: z.boolean().optional(),
 });
+
+const encoder = new TextEncoder();
+
+/** Plain error for the browser; unexpected failures are logged without the input or secrets. */
+function failure(error: unknown, requestId: string, tx: string): { status: number; code: string; message: string } {
+  if (error instanceof DecodeError) return { status: 400, code: error.code, message: error.message };
+  const reason = redactSecrets(error instanceof Error ? error.message : "unknown error");
+  console.error(`[analyze ${requestId}] unexpected failure for input ${inputTag(tx)}: ${reason}`);
+  return { status: 500, code: "INTERNAL", message: "Something went wrong while checking this transaction. Please try again." };
+}
+
+/**
+ * One AnalyzeStreamEvent per line, sent as each step starts. The verdict is
+ * sent as soon as the rules have run, before the explanation is written.
+ */
+function streamResponse(
+  run: (onProgress: (event: AnalyzeProgress) => void) => Promise<AnalyzeResponse>,
+  onError: (error: unknown) => { status: number; code: string; message: string },
+): Response {
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: AnalyzeStreamEvent) => {
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(toJsonSafe(event)) + "\n"));
+        } catch {
+          // The browser went away; the check still finishes and is cached.
+        }
+      };
+      try {
+        send({ type: "result", result: await run(send) });
+      } catch (error) {
+        const { status, code, message } = onError(error);
+        send({ type: "error", status, error: { code, message } });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // Already closed by the browser.
+        }
+      }
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
+  });
+}
 
 export async function POST(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
@@ -97,20 +153,20 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const log = (message: string) => console.warn(`[analyze ${requestId}] input ${inputTag(base64)}: ${message}`);
-    const analysis = await analyzeTransaction(
-      base64,
-      { rpc: getServerRpc(), explainer: getExplainer(log), log },
-      { userAddress: userAddress || undefined, deadline, fresh },
-    );
-    if (isCacheable(analysis)) cache.set(key, analysis);
-    const response: AnalyzeResponse = { requestId, ...analysis, cache: { hit: false } };
-    return Response.json(toJsonSafe(response));
+    const run = async (onProgress?: (event: AnalyzeProgress) => void): Promise<AnalyzeResponse> => {
+      const analysis = await analyzeTransaction(
+        base64,
+        { rpc: getServerRpc(), explainer: getExplainer(log), log },
+        { userAddress: userAddress || undefined, deadline, fresh, onProgress },
+      );
+      if (isCacheable(analysis)) cache.set(key, analysis);
+      return { requestId, ...analysis, cache: { hit: false } };
+    };
+
+    if (parsed.data.stream === true) return streamResponse(run, (error) => failure(error, requestId, tx));
+    return Response.json(toJsonSafe(await run()));
   } catch (error) {
-    if (error instanceof DecodeError) {
-      return jsonError(400, error.code, error.message);
-    }
-    const reason = redactSecrets(error instanceof Error ? error.message : "unknown error");
-    console.error(`[analyze ${requestId}] unexpected failure for input ${inputTag(tx)}: ${reason}`);
-    return jsonError(500, "INTERNAL", "Something went wrong while checking this transaction. Please try again.");
+    const { status, code, message } = failure(error, requestId, tx);
+    return jsonError(status, code, message);
   }
 }

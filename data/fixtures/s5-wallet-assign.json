@@ -1,0 +1,185 @@
+{
+  "kind": "signsafe-saved-result",
+  "format": 1,
+  "scenarioId": "s5-wallet-assign",
+  "capturedAt": "2026-11-07T09:12:25.715Z",
+  "cluster": "devnet",
+  "devnetData": "live",
+  "devnetDataAt": "2026-11-07T09:12:25.715Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAiWrktyp7/IhZnCxJthYsQ6dJs2ntFXVeHkjCBLhfT5QEBAQAkAQAAAD2caM5h8l9ho8HZWSw+bfP0v4uDHjfgFVZy+goh7NyaAA==",
+  "response": {
+    "requestId": "15b1c765-8e0d-4679-b580-42daa9ccfde5",
+    "cluster": "devnet",
+    "decoded": {
+      "version": "0",
+      "sizeBytes": 208,
+      "feePayer": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+      "signers": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "writable": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "signatures": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "present": false
+        }
+      ],
+      "accountKeys": [
+        {
+          "index": 0,
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "signer": true,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 1,
+          "address": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false,
+          "source": "static",
+          "resolved": true
+        }
+      ],
+      "lifetimeToken": "3K76gQACMHFGueycYqKePNAt8msGgEsM5gmxGrdqrkNp",
+      "usesDurableNonce": false,
+      "lookupTables": [],
+      "budget": {
+        "source": "none"
+      },
+      "instructions": [
+        {
+          "path": "0",
+          "programId": "11111111111111111111111111111111",
+          "programName": "System Program",
+          "known": true,
+          "inner": false,
+          "accountCount": 1,
+          "dataLength": 36,
+          "action": "assign",
+          "accounts": {
+            "account": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+          },
+          "args": {
+            "programAddress": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+          },
+          "summary": "Hand control of account 4gow...pj9r to program 59WC...v3ZB."
+        }
+      ],
+      "warnings": []
+    },
+    "simulation": {
+      "ran": true,
+      "ok": true,
+      "feeLamports": "5000",
+      "unitsConsumed": 150,
+      "logs": [
+        "Program 11111111111111111111111111111111 invoke [1]",
+        "Program 11111111111111111111111111111111 success"
+      ],
+      "logsTruncated": false,
+      "innerInstructions": [],
+      "changes": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "sol",
+          "before": "50000000",
+          "after": "49995000",
+          "delta": "-5000",
+          "includesFeeLamports": "5000"
+        },
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "programOwner",
+          "before": "11111111111111111111111111111111",
+          "after": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+        }
+      ],
+      "watched": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "roles": [
+            "feePayer",
+            "signer",
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        }
+      ],
+      "notWatched": [],
+      "preState": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "exists": true,
+          "lamports": "50000000",
+          "owner": "11111111111111111111111111111111"
+        }
+      ],
+      "slots": {
+        "preState": "519610816",
+        "simulation": "519610817"
+      },
+      "rpcEndpoint": "primary"
+    },
+    "verdict": {
+      "level": "DANGER",
+      "label": "Danger: don't sign unless you're certain",
+      "reason": "Hands control of a wallet to a program",
+      "complete": true,
+      "flags": [
+        {
+          "ruleId": "R-ASSIGN",
+          "severity": "danger",
+          "title": "Hands control of a wallet to a program",
+          "detail": "Account 4gow...pj9r, an existing wallet owned by the System Program, would be assigned to program 59WC...v3ZB. After that, that program controls the account and its SOL.",
+          "account": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "evidence": {
+            "account": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+            "newProgram": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+            "existedBefore": "yes, owned by the System Program"
+          },
+          "sources": [
+            {
+              "type": "instruction",
+              "path": "0",
+              "inner": false,
+              "summary": "Hand control of account 4gow...pj9r to program 59WC...v3ZB."
+            },
+            {
+              "type": "stateChange",
+              "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+              "changeKind": "programOwner",
+              "description": "Owning program: System Program -> program 59WC...v3ZB"
+            }
+          ]
+        }
+      ]
+    },
+    "explanation": {
+      "source": "template",
+      "summary": "Danger: hands control of a wallet to a program.",
+      "points": [
+        "It hands control of an existing wallet account to a program, which could then move its SOL."
+      ],
+      "advice": "Do not sign this unless you are certain you want to allow exactly what is described here.",
+      "notice": {
+        "code": "AI_OFF",
+        "message": "AI explanations are switched off on this server."
+      }
+    },
+    "timingsMs": {
+      "decode": 0,
+      "simulate": 819,
+      "rules": 0,
+      "explain": 0,
+      "total": 820
+    },
+    "cache": {
+      "hit": false
+    }
+  }
+}

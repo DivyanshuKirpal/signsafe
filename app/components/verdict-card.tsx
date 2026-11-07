@@ -8,7 +8,8 @@ const STYLES: Record<VerdictLevel, { box: string; badge: string; word: string }>
   LOW_RISK: { box: "border-emerald-600 dark:border-emerald-500", badge: "bg-emerald-700 text-white", word: "No known risks" },
 };
 
-export function VerdictCard({ verdict }: { verdict: Verdict }) {
+/** `saved`: this verdict is part of a replayed saved result (see the banner above it). */
+export function VerdictCard({ verdict, saved = false }: { verdict: Verdict; saved?: boolean }) {
   const style = STYLES[verdict.level];
   const issues = verdict.flags.filter((f) => f.severity !== "info").length;
   return (
@@ -16,6 +17,11 @@ export function VerdictCard({ verdict }: { verdict: Verdict }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${style.badge}`}>{style.word}</span>
         <span className="text-xs text-muted">Verdict from fixed rules, not from AI</span>
+        {saved && (
+          <span className="rounded-md border border-sky-700 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:border-sky-400 dark:text-sky-300">
+            Saved result
+          </span>
+        )}
       </div>
       <h2 id="verdict-heading" className="mt-2 text-xl font-black tracking-tight">
         {verdict.label}

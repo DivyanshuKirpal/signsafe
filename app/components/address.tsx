@@ -48,6 +48,11 @@ export function Address({ value, copy = false }: { value: string; copy?: boolean
           {copied ? "Copied" : "Copy"}
         </button>
       )}
+      {copy && (
+        <span role="status" className="sr-only">
+          {copied ? "Address copied" : ""}
+        </span>
+      )}
     </span>
   );
 }

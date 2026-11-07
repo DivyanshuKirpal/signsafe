@@ -1,25 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { AnalyzeResponse, ApiError } from "../lib/types";
-import { UserAddressContext } from "./address";
-import { CouldNotCheck } from "./could-not-check";
-import { ExplanationPanel } from "./explanation-panel";
-import { FlagList } from "./flag-list";
-import { InstructionList } from "./instruction-list";
-import { ScenarioButtons, ScenarioRevealCard, type ScenarioReveal, type ScenarioSummary } from "./scenario-buttons";
-import { SimulationPanel } from "./simulation-panel";
+import { useEffect, useRef, useState } from "react";
+import { readNdjson } from "../lib/client/ndjson";
+import type { SavedResultSummary } from "../lib/replay/saved-results";
+import type { AnalyzeResponse, AnalyzeStep, AnalyzeStreamEvent, ApiError, VerdictStage } from "../lib/types";
+import { ResultView } from "./result-view";
+import { SavedResultsPicker } from "./saved-results";
+import { ScenarioButtons, type ScenarioReveal, type ScenarioSummary } from "./scenario-buttons";
+import { type LoadingPhase, StepProgress } from "./step-progress";
 import { TxInput } from "./tx-input";
-import { TxOverview } from "./tx-overview";
-import { VerdictCard } from "./verdict-card";
+
+/** What the user asked for. "Try again" repeats it exactly. */
+type Action =
+  | { kind: "check"; tx: string; fresh: boolean; scenarioId?: string }
+  | { kind: "scenario"; scenario: ScenarioSummary }
+  | { kind: "replay"; id: string };
+
+type ErrorState = { status: "error"; title: string; message: string; retry: Action; retryAt?: number; replayId?: string };
 
 type State =
   | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; result: AnalyzeResponse; tx: string }
-  | { status: "error"; message: string };
+  | { status: "loading"; phase: LoadingPhase; step: AnalyzeStep | null; stage: VerdictStage | null; startedAt: number }
+  | { status: "success"; result: AnalyzeResponse; tx: string; scenarioId?: string }
+  | ErrorState;
 
+type Outcome = { ok: true; result: AnalyzeResponse } | { ok: false; message: string; retryAt?: number };
+
+/** The server's own deadline is 35 s (AI attempts included). */
 const REQUEST_TIMEOUT_MS = 40_000;
+const BUILD_TIMEOUT_MS = 15_000;
+const NETWORK_MESSAGE = "Could not reach the SignSafe server, or it took too long. Check your connection and try again.";
 
 function isApiError(value: unknown): value is ApiError {
   return (
@@ -30,23 +40,60 @@ function isApiError(value: unknown): value is ApiError {
   );
 }
 
+/** The server's plain message; for a rate limit also when "Try again" becomes useful (Retry-After). */
+async function readError(res: Response): Promise<{ message: string; retryAt?: number }> {
+  const body: unknown = await res.json().catch(() => null);
+  const message = isApiError(body) ? body.error.message : `The server answered with status ${res.status}.`;
+  const seconds = Number(res.headers.get("retry-after"));
+  return res.status === 429 && Number.isFinite(seconds) && seconds > 0 ? { message, retryAt: Date.now() + seconds * 1_000 } : { message };
+}
+
 export function Checker() {
   const [input, setInput] = useState("");
   const [userAddress, setUserAddress] = useState("");
   const [state, setState] = useState<State>({ status: "idle" });
   const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
+  const [examples, setExamples] = useState<SavedResultSummary[]>([]);
+  const [now, setNow] = useState(0);
+  const [announcement, setAnnouncement] = useState("");
   const controllerRef = useRef<AbortController | null>(null);
 
+  // Saved results for "Replay a saved result" (an empty list when the server has none).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/examples")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { examples?: SavedResultSummary[] } | null) => {
+        if (!cancelled && Array.isArray(body?.examples)) setExamples(body.examples);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // A clock for the elapsed time while checking and for the rate-limit countdown.
+  const ticking = state.status === "loading" || (state.status === "error" && state.retryAt !== undefined && now < state.retryAt);
+  useEffect(() => {
+    if (!ticking) return;
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [ticking]);
+
+  function startLoading(phase: LoadingPhase) {
+    const started = Date.now();
+    setNow(started);
+    setAnnouncement("");
+    setState({ status: "loading", phase, step: null, stage: null, startedAt: started });
+  }
+
   /**
-   * The one analysis path: pasted text and demo scenarios both go through here.
-   * fresh = "Check again": the server skips its cached result and explanation.
+   * The one analysis call: pasted text, demo scenarios and Check again all go
+   * through here. Streamed, so each step and the verdict show up as they happen.
    */
-  async function check(tx: string = input, fresh = false): Promise<boolean> {
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
+  async function analyze(tx: string, fresh: boolean, controller: AbortController): Promise<Outcome> {
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    setState({ status: "loading" });
+    const isCurrent = () => controllerRef.current === controller;
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -54,61 +101,133 @@ export function Checker() {
         body: JSON.stringify({
           input: { kind: "base64", tx, ...(userAddress.trim() ? { userAddress: userAddress.trim() } : {}) },
           ...(fresh ? { fresh: true } : {}),
+          stream: true,
         }),
         signal: controller.signal,
       });
-      const body: unknown = await res.json().catch(() => null);
-      if (controllerRef.current !== controller) return false; // superseded by a newer check
-      if (!res.ok) {
-        setState({
-          status: "error",
-          message: isApiError(body) ? body.error.message : `The server answered with status ${res.status}.`,
-        });
-        return false;
+      if (!res.ok) return { ok: false, ...(await readError(res)) };
+      if (!(res.headers.get("content-type") ?? "").includes("ndjson") || !res.body) {
+        return { ok: true, result: (await res.json()) as AnalyzeResponse }; // cached answers come as plain JSON
       }
-      setState({ status: "success", result: body as AnalyzeResponse, tx });
-      return true;
-    } catch {
-      if (controllerRef.current !== controller) return false; // superseded by a newer check
-      setState({
-        status: "error",
-        message: "Could not reach the SignSafe server, or it took too long. Check your connection and try again.",
+      const out: { result?: AnalyzeResponse; error?: string } = {};
+      await readNdjson<AnalyzeStreamEvent>(res.body, (event) => {
+        if (event.type === "result") out.result = event.result;
+        else if (event.type === "error") out.error = event.error.message;
+        else if (isCurrent()) {
+          setState((s) =>
+            s.status !== "loading" ? s : event.type === "step" ? { ...s, phase: "check", step: event.step } : { ...s, stage: event.result },
+          );
+        }
       });
-      return false;
+      if (out.result) return { ok: true, result: out.result };
+      return { ok: false, message: out.error ?? "The check stopped before it finished. Please try again." };
+    } catch {
+      return { ok: false, message: NETWORK_MESSAGE };
     } finally {
       clearTimeout(timer);
     }
   }
 
-  function checkPasted() {
-    setReveal(null);
-    void check();
-  }
+  async function run(action: Action) {
+    controllerRef.current?.abort(); // a newer request always wins
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const isCurrent = () => controllerRef.current === controller;
+    const fail = (title: string, message: string, extra: Partial<ErrorState> = {}) => {
+      if (isCurrent()) setState({ status: "error", title, message, retry: action, ...extra });
+    };
 
-  async function runScenario(scenario: ScenarioSummary) {
-    setReveal(null);
-    setState({ status: "loading" });
-    try {
-      const res = await fetch("/api/scenarios", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: scenario.id }),
-      });
-      const body: unknown = await res.json().catch(() => null);
-      if (!res.ok || typeof (body as { txBase64?: unknown })?.txBase64 !== "string") {
-        setState({ status: "error", message: isApiError(body) ? body.error.message : "The demo transaction could not be built." });
-        return;
+    if (action.kind === "replay") {
+      setReveal(null);
+      startLoading("replay");
+      try {
+        const res = await fetch(`/api/examples?id=${encodeURIComponent(action.id)}`, { signal: controller.signal });
+        const body: unknown = await res.json().catch(() => null);
+        if (!isCurrent()) return;
+        const saved = body as { result?: AnalyzeResponse; tx?: string; reveal?: ScenarioReveal } | null;
+        if (!res.ok || !saved?.result || typeof saved.tx !== "string") {
+          fail("Could not load the saved result", isApiError(body) ? body.error.message : "The saved result could not be loaded.");
+          return;
+        }
+        setInput(saved.tx);
+        setState({ status: "success", result: saved.result, tx: saved.tx, scenarioId: action.id });
+        setReveal(saved.reveal ?? null);
+        setAnnouncement(`Saved result loaded, not a new check: ${saved.result.verdict.label}.`);
+      } catch {
+        fail("Could not load the saved result", "Could not reach the SignSafe server to load the saved result.");
       }
-      const tx = (body as { txBase64: string }).txBase64;
+      return;
+    }
+
+    let tx: string;
+    let scenarioId: string | undefined;
+    if (action.kind === "scenario") {
+      setReveal(null);
+      startLoading("build");
+      scenarioId = action.scenario.id;
+      const replayId = examples.some((e) => e.id === scenarioId) ? scenarioId : undefined;
+      const timer = setTimeout(() => controller.abort(), BUILD_TIMEOUT_MS);
+      try {
+        const res = await fetch("/api/scenarios", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: action.scenario.id }),
+          signal: controller.signal,
+        });
+        const body: unknown = await res.json().catch(() => null);
+        if (!isCurrent()) return;
+        if (!res.ok || typeof (body as { txBase64?: unknown } | null)?.txBase64 !== "string") {
+          fail(
+            "Could not build the demo transaction",
+            isApiError(body) ? body.error.message : "The demo transaction could not be built.",
+            { replayId },
+          );
+          return;
+        }
+        tx = (body as { txBase64: string }).txBase64;
+      } catch {
+        fail("Could not build the demo transaction", "Could not reach the SignSafe server or devnet to build the demo transaction.", { replayId });
+        return;
+      } finally {
+        clearTimeout(timer);
+      }
       setInput(tx); // visible in the paste box: it is a real, unsigned devnet transaction
-      if (!(await check(tx))) return;
+      setState((s) => (s.status === "loading" ? { ...s, phase: "check" } : s));
+    } else {
+      tx = action.tx;
+      scenarioId = action.scenarioId;
+      startLoading("check");
+    }
+
+    const outcome = await analyze(tx, action.kind === "check" && action.fresh, controller);
+    if (!isCurrent()) return;
+    if (!outcome.ok) {
+      fail("Could not check this transaction", outcome.message, outcome.retryAt !== undefined ? { retryAt: outcome.retryAt } : {});
+      return;
+    }
+    setState({ status: "success", result: outcome.result, tx, scenarioId });
+    setAnnouncement(`Check finished: ${outcome.result.verdict.label}.`);
+    if (action.kind === "scenario") {
       // Only now, after the pipeline has given its verdict, ask what the scenario really was.
-      const revealed = await fetch(`/api/scenarios?reveal=${encodeURIComponent(scenario.id)}`).then((r) => (r.ok ? r.json() : null));
-      if (revealed) setReveal(revealed as ScenarioReveal);
-    } catch {
-      setState({ status: "error", message: "Could not reach the SignSafe server to build the demo transaction." });
+      const revealed: unknown = await fetch(`/api/scenarios?reveal=${encodeURIComponent(action.scenario.id)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      if (revealed && isCurrent()) setReveal(revealed as ScenarioReveal);
     }
   }
+
+  const busy = state.status === "loading";
+  const view =
+    state.status === "success"
+      ? { stage: state.result as VerdictStage, result: state.result }
+      : state.status === "loading" && state.stage
+        ? { stage: state.stage, result: null }
+        : null;
+  // A demo check that could not reach devnet: offer the saved result of the same scenario.
+  const offerId =
+    state.status === "success" && !state.result.replay && !state.result.simulation.ran && state.scenarioId
+      ? examples.find((e) => e.id === state.scenarioId)
+      : undefined;
 
   return (
     <div className="space-y-8">
@@ -120,62 +239,85 @@ export function Checker() {
         }}
         userAddress={userAddress}
         onUserAddressChange={setUserAddress}
-        onSubmit={checkPasted}
-        busy={state.status === "loading"}
+        onSubmit={() => {
+          setReveal(null);
+          void run({ kind: "check", tx: input, fresh: false });
+        }}
+        busy={busy}
       />
-      <ScenarioButtons busy={state.status === "loading"} onPick={(s) => void runScenario(s)} />
+      <ScenarioButtons busy={busy} onPick={(scenario) => void run({ kind: "scenario", scenario })} />
+      <SavedResultsPicker examples={examples} busy={busy} onReplay={(id) => void run({ kind: "replay", id })} />
 
-      <div aria-live="polite">
-        {state.status === "loading" && <p className="text-sm text-muted">Decoding, simulating on devnet and checking rules...</p>}
-        {state.status === "error" && (
-          <div role="alert" className="rounded-lg border border-destructive p-3 text-sm">
-            <p className="font-semibold">Could not check this transaction</p>
-            <p className="mt-1">{state.message}</p>
-          </div>
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
+      {state.status === "loading" && <StepProgress phase={state.phase} step={state.step} elapsedMs={now - state.startedAt} />}
+      {state.status === "error" && (
+        <ErrorBox
+          error={state}
+          now={now}
+          replayCode={examples.find((e) => e.id === state.replayId)?.code}
+          onRetry={() => void run(state.retry)}
+          onReplay={(id) => void run({ kind: "replay", id })}
+        />
+      )}
+
+      {view && (
+        <ResultView
+          stage={view.stage}
+          result={view.result}
+          reveal={reveal}
+          busy={busy}
+          onCheckAgain={() => {
+            if (state.status === "success") void run({ kind: "check", tx: state.tx, fresh: true, scenarioId: state.scenarioId });
+          }}
+          replayOffer={offerId ? { code: offerId.code, onReplay: () => void run({ kind: "replay", id: offerId.id }) } : null}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A plain message, "Try again" (counting down after a rate limit), and a saved result when one fits. */
+function ErrorBox({
+  error,
+  now,
+  replayCode,
+  onRetry,
+  onReplay,
+}: {
+  error: ErrorState;
+  now: number;
+  replayCode?: string;
+  onRetry: () => void;
+  onReplay: (id: string) => void;
+}) {
+  const wait = error.retryAt !== undefined ? Math.max(0, Math.ceil((error.retryAt - now) / 1_000)) : 0;
+  return (
+    <div className="space-y-3 rounded-lg border-2 border-destructive bg-card p-3 text-sm">
+      <div role="alert">
+        <p className="font-semibold">{error.title}</p>
+        <p className="mt-1">{error.message}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onRetry}
+          disabled={wait > 0}
+          className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {wait > 0 ? `Try again in ${wait} s` : "Try again"}
+        </button>
+        {error.replayId && (
+          <button
+            type="button"
+            onClick={() => onReplay(error.replayId!)}
+            className="cursor-pointer rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium transition hover:bg-cream"
+          >
+            Replay the saved result{replayCode ? ` of ${replayCode}` : ""} instead
+          </button>
         )}
       </div>
-
-      {state.status === "success" && (
-        <UserAddressContext.Provider value={state.result.userAddress}>
-          <div className="space-y-6">
-            {/* The verdict (rules) and its explanation side by side on wide screens, stacked on phones. */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <VerdictCard verdict={state.result.verdict} />
-              <ExplanationPanel explanation={state.result.explanation} />
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-              <span>
-                {state.result.cache?.hit && state.result.cache.storedAt
-                  ? `Saved result from ${new Date(state.result.cache.storedAt).toLocaleTimeString()} (results are kept up to 10 minutes).`
-                  : "Fresh result."}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const tx = state.tx;
-                  void check(tx, true);
-                }}
-                className="cursor-pointer rounded-lg border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition hover:bg-cream"
-              >
-                Check again
-              </button>
-            </div>
-            {reveal && (
-              <ScenarioRevealCard reveal={reveal} actualLevel={state.result.verdict.level} actualLabel={state.result.verdict.label} />
-            )}
-            <CouldNotCheck decoded={state.result.decoded} simulation={state.result.simulation} />
-            <FlagList flags={state.result.verdict.flags} />
-            <SimulationPanel simulation={state.result.simulation} />
-            <section aria-labelledby="instructions-heading" className="space-y-3">
-              <h2 id="instructions-heading" className="text-lg font-semibold">
-                What this transaction asks to do
-              </h2>
-              <InstructionList instructions={state.result.decoded.instructions} />
-            </section>
-            <TxOverview decoded={state.result.decoded} />
-          </div>
-        </UserAddressContext.Provider>
-      )}
     </div>
   );
 }

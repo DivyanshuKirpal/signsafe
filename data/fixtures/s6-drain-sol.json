@@ -1,0 +1,210 @@
+{
+  "kind": "signsafe-saved-result",
+  "format": 1,
+  "scenarioId": "s6-drain-sol",
+  "capturedAt": "2026-11-07T09:12:28.390Z",
+  "cluster": "devnet",
+  "devnetData": "live",
+  "devnetDataAt": "2026-11-07T09:12:28.390Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAzbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBPZxozmHyX2GjwdlZLD5t8/S/i4MeN+AVVnL6CiHs3JoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANx1RQHeB6QHNtv0YS48IPWhfbAOu9BRAmc9y0hlnxoaAQICAAEMAgAAAODK1AIAAAAAAA==",
+  "response": {
+    "requestId": "37d4724f-635b-4fb0-b873-c1937c227ace",
+    "cluster": "devnet",
+    "decoded": {
+      "version": "0",
+      "sizeBytes": 217,
+      "feePayer": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+      "signers": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "writable": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+        "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+      ],
+      "signatures": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "present": false
+        }
+      ],
+      "accountKeys": [
+        {
+          "index": 0,
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "signer": true,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 1,
+          "address": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+          "signer": false,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 2,
+          "address": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false,
+          "source": "static",
+          "resolved": true
+        }
+      ],
+      "lifetimeToken": "FqaQdAEZCSW1JJgxAueDvXSNPhB17ADJzK8hsZjG284R",
+      "usesDurableNonce": false,
+      "lookupTables": [],
+      "budget": {
+        "source": "none"
+      },
+      "instructions": [
+        {
+          "path": "0",
+          "programId": "11111111111111111111111111111111",
+          "programName": "System Program",
+          "known": true,
+          "inner": false,
+          "accountCount": 2,
+          "dataLength": 12,
+          "action": "transferSol",
+          "accounts": {
+            "source": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+            "destination": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+          },
+          "args": {
+            "amount": "47500000"
+          },
+          "summary": "Send 0.0475 SOL from 4gow...pj9r to 59WC...v3ZB."
+        }
+      ],
+      "warnings": []
+    },
+    "simulation": {
+      "ran": true,
+      "ok": true,
+      "feeLamports": "5000",
+      "unitsConsumed": 150,
+      "logs": [
+        "Program 11111111111111111111111111111111 invoke [1]",
+        "Program 11111111111111111111111111111111 success"
+      ],
+      "logsTruncated": false,
+      "innerInstructions": [],
+      "changes": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "sol",
+          "before": "50000000",
+          "after": "2495000",
+          "delta": "-47505000",
+          "includesFeeLamports": "5000"
+        },
+        {
+          "address": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+          "kind": "created",
+          "before": null,
+          "after": "11111111111111111111111111111111"
+        },
+        {
+          "address": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+          "kind": "sol",
+          "before": "0",
+          "after": "47500000",
+          "delta": "47500000"
+        }
+      ],
+      "watched": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "roles": [
+            "feePayer",
+            "signer",
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        },
+        {
+          "address": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+          "roles": [
+            "writable"
+          ],
+          "existedBefore": false,
+          "existsAfter": true
+        }
+      ],
+      "notWatched": [],
+      "preState": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "exists": true,
+          "lamports": "50000000",
+          "owner": "11111111111111111111111111111111"
+        },
+        {
+          "address": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB",
+          "exists": false
+        }
+      ],
+      "slots": {
+        "preState": "519610827",
+        "simulation": "519610829"
+      },
+      "rpcEndpoint": "primary"
+    },
+    "verdict": {
+      "level": "DANGER",
+      "label": "Danger: don't sign unless you're certain",
+      "reason": "Empties most of a balance",
+      "complete": true,
+      "flags": [
+        {
+          "ruleId": "R-OUTFLOW",
+          "severity": "danger",
+          "title": "Empties most of a balance",
+          "detail": "Signer 4gow...pj9r would lose 95% of its SOL balance (0.05 SOL -> 0.002495 SOL, including the network fee of 0.000005 SOL).",
+          "account": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "evidence": {
+            "account": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+            "before": "0.05 SOL",
+            "after": "0.002495 SOL",
+            "loss": "95%"
+          },
+          "sources": [
+            {
+              "type": "stateChange",
+              "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+              "changeKind": "sol",
+              "description": "SOL balance: 0.05 SOL -> 0.002495 SOL (-0.047505 SOL)"
+            }
+          ]
+        }
+      ]
+    },
+    "explanation": {
+      "source": "template",
+      "summary": "Danger: empties most of a balance.",
+      "points": [
+        "A signer would lose a large part of a balance.",
+        "It asks to send 0.0475 SOL from 4gow...pj9r to 59WC...v3ZB."
+      ],
+      "advice": "Do not sign this unless you are certain you want to allow exactly what is described here.",
+      "notice": {
+        "code": "AI_OFF",
+        "message": "AI explanations are switched off on this server."
+      }
+    },
+    "timingsMs": {
+      "decode": 0,
+      "simulate": 807,
+      "rules": 0,
+      "explain": 0,
+      "total": 808
+    },
+    "cache": {
+      "hit": false
+    }
+  }
+}

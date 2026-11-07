@@ -1,0 +1,243 @@
+{
+  "kind": "signsafe-saved-result",
+  "format": 1,
+  "scenarioId": "s4-token-account-takeover",
+  "capturedAt": "2026-11-07T09:12:22.708Z",
+  "cluster": "devnet",
+  "devnetData": "live",
+  "devnetDataAt": "2026-11-07T09:12:22.708Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAzbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBN0yAlmMcOvG57n9+kkkkzGqz8Xl4QubRQRv7kNgOqB4G3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqUsMQ9waiyzyXkoQgoiQ67SsscISG3ZRJKVjU7YC9wLoAQICAQAjBgIBPZxozmHyX2GjwdlZLD5t8/S/i4MeN+AVVnL6CiHs3JoA",
+  "response": {
+    "requestId": "c6d89409-c48b-42a6-b7f8-35da4a146a95",
+    "cluster": "devnet",
+    "decoded": {
+      "version": "0",
+      "sizeBytes": 240,
+      "feePayer": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+      "signers": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "writable": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+        "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1"
+      ],
+      "signatures": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "present": false
+        }
+      ],
+      "accountKeys": [
+        {
+          "index": 0,
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "signer": true,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 1,
+          "address": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+          "signer": false,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 2,
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "signer": false,
+          "writable": false,
+          "source": "static",
+          "resolved": true
+        }
+      ],
+      "lifetimeToken": "63xRdT8txk4QbaZX3DaQprdxTYGJwQ3LBTu7rtgotuU3",
+      "usesDurableNonce": false,
+      "lookupTables": [],
+      "budget": {
+        "source": "none"
+      },
+      "instructions": [
+        {
+          "path": "0",
+          "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "programName": "SPL Token",
+          "known": true,
+          "inner": false,
+          "accountCount": 2,
+          "dataLength": 35,
+          "action": "setAuthority",
+          "accounts": {
+            "owned": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+            "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+          },
+          "args": {
+            "authorityType": "AccountOwner",
+            "newAuthority": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+          },
+          "summary": "Change the owner of 4is5...Jfc1 to 59WC...v3ZB."
+        }
+      ],
+      "warnings": []
+    },
+    "simulation": {
+      "ran": true,
+      "ok": true,
+      "feeLamports": "5000",
+      "unitsConsumed": 118,
+      "logs": [
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]",
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 118 of 200000 compute units",
+        "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success"
+      ],
+      "logsTruncated": false,
+      "innerInstructions": [],
+      "changes": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "sol",
+          "before": "50000000",
+          "after": "49995000",
+          "delta": "-5000",
+          "includesFeeLamports": "5000"
+        },
+        {
+          "address": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+          "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+          "decimals": 6,
+          "tokenAccountOwner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "tokenOwner",
+          "before": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "after": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+        }
+      ],
+      "watched": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "roles": [
+            "feePayer",
+            "signer",
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        },
+        {
+          "address": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+          "roles": [
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        },
+        {
+          "address": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+          "roles": [
+            "mint"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        }
+      ],
+      "notWatched": [],
+      "preState": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "exists": true,
+          "lamports": "50000000",
+          "owner": "11111111111111111111111111111111"
+        },
+        {
+          "address": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+          "exists": true,
+          "lamports": "1488440",
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "token": {
+            "program": "token",
+            "mint": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+            "owner": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+            "amount": "1000000000",
+            "decimals": 6,
+            "delegate": null,
+            "delegatedAmount": "0",
+            "closeAuthority": null
+          }
+        },
+        {
+          "address": "5yGYXCHGR1jyF3znb7Xc2vT8XKCGoqBjpmWNh7h9KNss",
+          "exists": true,
+          "lamports": "1066800",
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "mint": {
+            "decimals": 6,
+            "supply": "1000000000",
+            "mintAuthority": "7uGEmoiKToMgPKcBLrUFBraKsM6cWiNDWc7i65RduVV3",
+            "freezeAuthority": null
+          }
+        }
+      ],
+      "slots": {
+        "preState": "519610803",
+        "simulation": "519610807"
+      },
+      "rpcEndpoint": "primary"
+    },
+    "verdict": {
+      "level": "DANGER",
+      "label": "Danger: don't sign unless you're certain",
+      "reason": "Hands a token account to a different owner",
+      "complete": true,
+      "flags": [
+        {
+          "ruleId": "R-SET-AUTHORITY",
+          "severity": "danger",
+          "title": "Hands a token account to a different owner",
+          "detail": "The owner of token account 4is5...Jfc1 would change to 59WC...v3ZB, who would then control every token in it.",
+          "account": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+          "evidence": {
+            "tokenAccount": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+            "newOwner": "59WCXruvf9gS3wUajDcaGnyMQfvueVa74ba8s5bhv3ZB"
+          },
+          "sources": [
+            {
+              "type": "instruction",
+              "path": "0",
+              "inner": false,
+              "summary": "Change the owner of 4is5...Jfc1 to 59WC...v3ZB."
+            },
+            {
+              "type": "stateChange",
+              "address": "4is5nB5zd7T3Hn3KS5mn1wyFXjXzG3pDnmtR8BrSJfc1",
+              "changeKind": "tokenOwner",
+              "description": "Token account owner: 4gow...pj9r -> 59WC...v3ZB"
+            }
+          ]
+        }
+      ]
+    },
+    "explanation": {
+      "source": "template",
+      "summary": "Danger: hands a token account to a different owner.",
+      "points": [
+        "It hands control of a token account, or of a token mint, to a different address."
+      ],
+      "advice": "Do not sign this unless you are certain you want to allow exactly what is described here.",
+      "notice": {
+        "code": "AI_OFF",
+        "message": "AI explanations are switched off on this server."
+      }
+    },
+    "timingsMs": {
+      "decode": 1,
+      "simulate": 1186,
+      "rules": 0,
+      "explain": 0,
+      "total": 1188
+    },
+    "cache": {
+      "hit": false
+    }
+  }
+}

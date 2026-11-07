@@ -1,0 +1,172 @@
+{
+  "kind": "signsafe-saved-result",
+  "format": 1,
+  "scenarioId": "s7-unknown-program",
+  "capturedAt": "2026-11-07T09:12:31.043Z",
+  "cluster": "devnet",
+  "devnetData": "live",
+  "devnetDataAt": "2026-11-07T09:12:31.043Z",
+  "txBase64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjbFxw4ZH4rREYh3xB6hQQQ7Zzc0IMoMQqu75FOY7yJBC7wPwLtHyi90xBEulKsTz6PGNOXcF+rLA80aI81+eHylmeOuB3NeE06duasZ93mnzcYzLarSgAoKvoLNZDHvqAEBAQAKbWludCBiYWRnZQA=",
+  "response": {
+    "requestId": "2c84095a-80d2-48cb-98a2-37155cdcb057",
+    "cluster": "devnet",
+    "decoded": {
+      "version": "0",
+      "sizeBytes": 182,
+      "feePayer": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+      "signers": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "writable": [
+        "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+      ],
+      "signatures": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "present": false
+        }
+      ],
+      "accountKeys": [
+        {
+          "index": 0,
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "signer": true,
+          "writable": true,
+          "source": "static",
+          "resolved": true
+        },
+        {
+          "index": 1,
+          "address": "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV",
+          "signer": false,
+          "writable": false,
+          "source": "static",
+          "resolved": true
+        }
+      ],
+      "lifetimeToken": "C9SNVwoqTi5ZAmm4LbgDVN6JFQb24TGMgX2MLYj9dRp3",
+      "usesDurableNonce": false,
+      "lookupTables": [],
+      "budget": {
+        "source": "none"
+      },
+      "instructions": [
+        {
+          "path": "0",
+          "programId": "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV",
+          "programName": "Unknown program",
+          "known": false,
+          "inner": false,
+          "accountCount": 1,
+          "dataLength": 10,
+          "action": "unknown",
+          "accounts": {
+            "account1": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r"
+          },
+          "args": {
+            "dataPrefix": "0x6d696e7420626164... (10 bytes)"
+          },
+          "summary": "Call an unknown program noop...tMmV with 1 account(s) and 10 byte(s) of data."
+        }
+      ],
+      "warnings": []
+    },
+    "simulation": {
+      "ran": true,
+      "ok": true,
+      "feeLamports": "5000",
+      "unitsConsumed": 322,
+      "logs": [
+        "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV invoke [1]",
+        "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV consumed 322 of 200000 compute units",
+        "Program noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV success"
+      ],
+      "logsTruncated": false,
+      "innerInstructions": [],
+      "changes": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "kind": "sol",
+          "before": "50000000",
+          "after": "49995000",
+          "delta": "-5000",
+          "includesFeeLamports": "5000"
+        }
+      ],
+      "watched": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "roles": [
+            "feePayer",
+            "signer",
+            "writable"
+          ],
+          "existedBefore": true,
+          "existsAfter": true
+        }
+      ],
+      "notWatched": [],
+      "preState": [
+        {
+          "address": "4gow1QUNG34T5UhNEjnAph9oovSxTbbyWVQYkezBpj9r",
+          "exists": true,
+          "lamports": "50000000",
+          "owner": "11111111111111111111111111111111"
+        }
+      ],
+      "slots": {
+        "preState": "519610837",
+        "simulation": "519610839"
+      },
+      "rpcEndpoint": "primary"
+    },
+    "verdict": {
+      "level": "CAUTION",
+      "label": "Caution: check the details",
+      "reason": "Calls a program SignSafe does not recognise",
+      "complete": true,
+      "flags": [
+        {
+          "ruleId": "R-UNKNOWN-PROGRAM",
+          "severity": "caution",
+          "title": "Calls a program SignSafe does not recognise",
+          "detail": "Instruction #0 calls program noop...tMmV, which is not in SignSafe's list of known programs. It receives a signer's account, so it may act on them. What it does is judged only from the simulated account changes.",
+          "evidence": {
+            "program": "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV",
+            "receives": "a signer's account"
+          },
+          "sources": [
+            {
+              "type": "instruction",
+              "path": "0",
+              "inner": false,
+              "summary": "Call an unknown program noop...tMmV with 1 account(s) and 10 byte(s) of data."
+            }
+          ]
+        }
+      ]
+    },
+    "explanation": {
+      "source": "template",
+      "summary": "Caution: calls a program SignSafe does not recognise.",
+      "points": [
+        "It calls a program SignSafe does not recognise; only the simulated changes show what it does."
+      ],
+      "advice": "Check the details below and sign only if they match what you expect.",
+      "notice": {
+        "code": "AI_OFF",
+        "message": "AI explanations are switched off on this server."
+      }
+    },
+    "timingsMs": {
+      "decode": 1,
+      "simulate": 721,
+      "rules": 0,
+      "explain": 0,
+      "total": 722
+    },
+    "cache": {
+      "hit": false
+    }
+  }
+}

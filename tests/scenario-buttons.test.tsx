@@ -72,10 +72,10 @@ describe("scenario buttons", () => {
     await screen.findByText(/Demo scenario S3: what it really was/);
 
     // Same analysis path as a pasted transaction: kind "base64" with the tx from the paste box.
-    expect(analyzedBody).toEqual({ input: { kind: "base64", tx: TX } });
+    expect(analyzedBody).toEqual({ input: { kind: "base64", tx: TX }, stream: true });
     expect((screen.getByLabelText(/Transaction \(base64/) as HTMLTextAreaElement).value).toBe(TX);
     // The reveal is requested only after the analysis answered.
-    expect(calls).toEqual([
+    expect(calls.filter((c) => c !== "GET /api/examples")).toEqual([
       "GET /api/scenarios",
       "POST /api/scenarios",
       "POST /api/analyze",

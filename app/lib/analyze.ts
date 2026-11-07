@@ -12,7 +12,7 @@
 import { buildExplanationContext } from "./ai/facts";
 import { type Explainer, noticeFor, templateOnly } from "./ai/explain";
 import { AI } from "./config";
-import type { AnalyzeResponse, SimulationErrorCode, SimulationResult } from "./types";
+import type { AnalyzeResponse, AnalyzeStep, SimulationErrorCode, SimulationResult, VerdictStage } from "./types";
 import { assessRisk } from "./risk/engine";
 import { decodeTransaction, normalizeBase64Input } from "./solana/decode";
 import { ensureDevnet, lookupTableFetcher, redactSecrets, type SignSafeRpc } from "./solana/rpc";
@@ -34,7 +34,14 @@ export interface AnalyzeOptions {
   deadline?: number;
   /** "Check again": do not reuse a cached explanation. */
   fresh?: boolean;
+  /**
+   * Progress for the page: called when each step starts, and with the verdict
+   * as soon as the rules have run (before the explanation is written).
+   */
+  onProgress?: (event: AnalyzeProgress) => void;
 }
+
+export type AnalyzeProgress = { type: "step"; step: AnalyzeStep } | { type: "verdict"; result: VerdictStage };
 
 const NOT_RUN_MESSAGES: Record<"RPC_NOT_CONFIGURED" | "RPC_NOT_DEVNET" | "RPC_UNAVAILABLE", string> = {
   RPC_NOT_CONFIGURED: "Simulation is switched off because no devnet RPC endpoint is configured on the server.",
@@ -74,7 +81,15 @@ export async function analyzeTransaction(
   };
   const base64 = normalizeBase64Input(input);
   const log = deps.log ?? (() => {});
+  const progress = (event: AnalyzeProgress) => {
+    try {
+      options.onProgress?.(event);
+    } catch {
+      // A progress listener (for example a closed connection) must never break the check.
+    }
+  };
 
+  progress({ type: "step", step: "decode" });
   // Devnet guard: only ever talk to an endpoint whose genesis hash is devnet's.
   let rpcState: "ok" | "RPC_NOT_CONFIGURED" | "RPC_NOT_DEVNET" | "RPC_UNAVAILABLE" = "RPC_NOT_CONFIGURED";
   if (deps.rpc) {
@@ -91,6 +106,7 @@ export async function analyzeTransaction(
   let decoded = await decodeTransaction(base64, rpc ? { fetchLookupTables: lookupTableFetcher(rpc.rpc) } : {});
   lap("decode", decodeStart);
 
+  progress({ type: "step", step: "simulate" });
   let simulation: SimulationResult;
   if (!rpc) {
     simulation = notRun(rpcState === "ok" ? "RPC_NOT_CONFIGURED" : rpcState);
@@ -108,12 +124,17 @@ export async function analyzeTransaction(
     lap("simulate", simStart);
   }
 
+  progress({ type: "step", step: "rules" });
   const rulesStart = performance.now();
   // The verdict depends only on the decoded transaction and the simulation.
   const verdict = assessRisk(decoded, simulation);
   lap("rules", rulesStart);
+  const stage: VerdictStage = { cluster: "devnet", decoded, simulation, verdict };
+  if (options.userAddress) stage.userAddress = options.userAddress;
+  progress({ type: "verdict", result: stage });
 
   // Explanation last: it describes the final verdict and cannot change it.
+  progress({ type: "step", step: "explain" });
   const explainStart = performance.now();
   const context = buildExplanationContext({ decoded, simulation, verdict }, options.userAddress);
   const explainer = deps.explainer ?? templateOnly(noticeFor("AI_OFF"));

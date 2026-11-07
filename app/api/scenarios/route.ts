@@ -8,10 +8,10 @@
  */
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
-import { VERDICT_LABELS } from "@/app/lib/risk/templates";
 import { buildScenario } from "@/app/lib/scenarios/build";
 import { loadDemoConfig } from "@/app/lib/scenarios/demo-config";
 import { getScenario, SCENARIO_IDS, SCENARIOS } from "@/app/lib/scenarios/index";
+import { revealScenario } from "@/app/lib/scenarios/reveal";
 import { ensureDevnet, redactSecrets } from "@/app/lib/solana/rpc";
 import { getServerRpc } from "@/app/lib/solana/server-rpc";
 import { jsonError } from "@/app/lib/util/errors";
@@ -23,14 +23,7 @@ export async function GET(request: Request): Promise<Response> {
   if (reveal !== null) {
     const scenario = getScenario(reveal);
     if (!scenario) return jsonError(404, "UNKNOWN_SCENARIO", "There is no scenario with that id.");
-    return Response.json({
-      id: scenario.id,
-      code: scenario.code,
-      pitch: scenario.pitch,
-      description: scenario.description,
-      expected: scenario.expected,
-      expectedLabels: scenario.expected.map((level) => VERDICT_LABELS[level]),
-    });
+    return Response.json(revealScenario(scenario));
   }
   return Response.json({
     ready: loadDemoConfig() !== null,

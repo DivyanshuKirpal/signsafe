@@ -328,4 +328,39 @@ export interface AnalyzeResponse {
   /** Set when this result came from the server's short-lived cache. */
   cache?: { hit: boolean; storedAt?: string };
   timingsMs: Record<string, number>;
+  /** Set only when this is a saved result being replayed (not a new check). */
+  replay?: ReplayInfo;
+}
+
+/** The steps of one check, in order. */
+export type AnalyzeStep = "decode" | "simulate" | "rules" | "explain";
+
+/** The verdict and its evidence. Final before the explanation step starts. */
+export type VerdictStage = Pick<AnalyzeResponse, "cluster" | "decoded" | "simulation" | "verdict" | "userAddress">;
+
+/**
+ * One line of the streamed /api/analyze response (request field `stream: true`,
+ * content type application/x-ndjson): step events, then the verdict as soon as
+ * the rules have run, then the full result (or an error).
+ */
+export type AnalyzeStreamEvent =
+  | { type: "step"; step: AnalyzeStep }
+  | { type: "verdict"; result: VerdictStage }
+  | { type: "result"; result: AnalyzeResponse }
+  | { type: "error"; status: number; error: { code: string; message: string } };
+
+/**
+ * Describes a saved result (data/fixtures, ARCHITECTURE 12.6). The response
+ * itself is kept exactly as it was produced; a replay only adds this.
+ */
+export interface ReplayInfo {
+  scenarioId: string;
+  /** Short scenario code, e.g. "S3". */
+  code: string;
+  /** When the saved result was produced (ISO 8601). */
+  capturedAt: string;
+  /** "live": simulated against devnet when it was saved. "recorded": produced from devnet RPC traffic recorded earlier. */
+  devnetData: "live" | "recorded";
+  /** When the devnet state it describes was read (ISO 8601). */
+  devnetDataAt: string;
 }

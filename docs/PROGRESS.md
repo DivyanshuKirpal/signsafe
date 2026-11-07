@@ -20,11 +20,11 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M3 Rules and verdict | Completed and verified (Sat 7 Nov ~01:40 IST) |
 | M4 Scenarios | Completed and verified (Sat 7 Nov ~03:10 IST) |
 | M5 AI | **Completed and verified** (Sat 7 Nov ~04:40 IST). Approved by the user for M5 only (effort max), started from c8f58de. |
-| M6 Polish | **Awaiting the user's explicit approval. Do not start.** |
+| M6 Polish | **In progress.** Approved by the user for M6 only (effort high) on Sat 7 Nov, starting from 66615b7. Recording plan: A + D (record after the Gemini reset; saved replays as the backup). |
 | M7-M8 | Not approved |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
-- **Next recommended effort (M6): medium.** Clear scope (UI states, accessibility pass, README draft, fixtures:save + replay). Nothing security-critical changes; the verdict and AI layers are done and tested.
+- M7 is not approved. Stop after M6 and wait.
 
 ## Completed and verified
 ### M0-M4 (summary)
@@ -57,7 +57,9 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - `npm run scan:secrets`: clean.
 
 ## Partially implemented work
-- None. M6 has not started.
+- M6 started Sat 7 Nov 14:30 IST.
+  - Done and verified (15:00): `fixtures:save` (live, `--ai`, `--offline`), `data/fixtures/` for S1-S8 captured live on devnet at 14:42 IST, **S3 and S8 with accepted Gemini explanations** (model version gemini-3.6-flash); replay route and page (banner above the verdict); streamed step progress with the verdict shown before the explanation; Try again, rate-limit countdown, raw JSON. Replays verified after a restart of the production server with the RPC and Gemini unreachable (byte-identical to the saved files).
+  - Next: real-browser review (desktop and 375 px), manual QA list, README and learning notes.
 
 ## Next three steps (once M6 is approved)
 1. UI states and accessibility pass (keyboard, 375 px, contrast, loading per step), user browser check of the result page.
@@ -85,7 +87,6 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - None (the M5 checkpoint commit is pushed; verify with `git status -sb`).
 
 ## Decisions awaiting the user
-- Approval to start M6 (recommended effort: medium).
 - **Gemini quota for the demo** (20 requests/day on the primary model). Options, no paid options suggested:
   - A: record after the daily reset (about 14:00 IST) and keep Gemini calls for the demo itself (the 6 h explanation cache reuses answers for the same findings).
   - B: the user creates a second free key in another Google Cloud project (quota is per project) and pastes it into `.env.local` themself.
@@ -95,4 +96,4 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 
 ## Decided by the user
 - 6 Nov: scaffold via sibling folder; npm; demo funding option A; MIT license.
-- 7 Nov: schedule; MLH Challenges; personal targets 7:30 PM / 9:15 PM IST; M2 simulation only; M3 rules/verdict; empty-balance rule; ownership correction; M4 scenarios (funded 1 devnet SOL); M5 Gemini explanations only (max effort).
+- 7 Nov: schedule; MLH Challenges; personal targets 7:30 PM / 9:15 PM IST; M2 simulation only; M3 rules/verdict; empty-balance rule; ownership correction; M4 scenarios (funded 1 devnet SOL); M5 Gemini explanations only (max effort); M6 approved (high effort) with recording options A + D, the existing Gemini project and models, routine checks AI off.

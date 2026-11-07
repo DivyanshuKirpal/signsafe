@@ -19,61 +19,61 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M2 Simulate and diff | Completed and verified (Sat 7 Nov ~00:55 IST) |
 | M3 Rules and verdict | Completed and verified (Sat 7 Nov ~01:40 IST) |
 | M4 Scenarios | Completed and verified (Sat 7 Nov ~03:10 IST) |
-| M5 AI | **Completed and verified** (Sat 7 Nov ~04:40 IST). Approved by the user for M5 only (effort max), started from c8f58de. |
-| M6 Polish | **In progress.** Approved by the user for M6 only (effort high) on Sat 7 Nov, starting from 66615b7. Recording plan: A + D (record after the Gemini reset; saved replays as the backup). |
-| M7-M8 | Not approved |
+| M5 AI | Completed and verified (Sat 7 Nov ~04:40 IST), effort max, from c8f58de |
+| M6 Polish | **Completed and verified** (Sat 7 Nov ~15:35 IST). Approved by the user for M6 only (effort high), started from 66615b7. |
+| M7 Stretch | **Awaiting the user's explicit approval and choice. Do not start.** ARCHITECTURE 14: the user picks F3 (check with Phantom before signing), F4 (explain a confirmed transaction by signature) or a Vercel deploy, or skips to M8. |
+| M8 Submit | Not approved |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
-- M7 is not approved. Stop after M6 and wait.
+- **Next recommended effort (M7): high** for a Vercel deploy or F4; **xhigh** for F3 (wallet signing flow, security-sensitive). The deploy is public, so it needs the user's go-ahead and the user sets the keys in the Vercel dashboard (never in chat).
 
 ## Completed and verified
-### M0-M4 (summary)
+### M0-M5 (summary)
 - Scaffold, env/secret tooling, git; decoder (legacy/v0/v1); devnet simulation and state diff; 12 risk rules + verdict (DANGER > UNKNOWN > CAUTION > LOW_RISK, `complete` flag); demo setup (funded, rerun-safe) and scenarios S1-S8 with buttons; `live:check`, `scenarios:check`, recorded fixtures.
+- M5: Gemini explanation after the verdict (`app/lib/ai/`): facts only (never the raw transaction), JSON schema output, lowest thinking level, retry/fallback bounded by a 35 s deadline, validation of meaning, built-in fallback, explanation cache (6 h, accepted answers only), analysis cache (10 min), rate limit (10 fresh checks/min/IP), `AI_ENABLED=false` = no call. Live: 7/8 accepted on the first run; S3 and S8 accepted through the route.
 
-### M5 (AI explanation)
-- Pipeline: decode -> simulate -> rules/verdict -> **explanation** (`app/lib/analyze.ts`). The explainer receives only `buildExplanationContext(...)` of the finished analysis; it returns text and cannot change the verdict (tested, including an explainer that tries).
-- `app/lib/ai/facts.ts`: facts sent to Gemini (verdict, findings with "based on" lines, our instruction descriptions, account changes, simulation status, could-not-check list, optional yourAddress) + capped `untrusted` block (memos, program logs). Never: raw tx, keys, URLs, scenario labels/expected verdicts. Also the validator's meta (coverage, grounding from trusted facts only).
-- `app/lib/ai/prompt.ts`: system instruction + JSON schema. `app/lib/ai/gemini.ts`: REST client (key in `x-goog-api-key`), JSON schema output, thinking MINIMAL -> LOW -> none per model, retry/fallback per ARCHITECTURE 9.6 bounded by the 35 s route deadline, 400 `API_KEY_INVALID` = auth.
-- `app/lib/ai/validate.ts`: zod shape + meaning checks (guarantees, signing advice vs verdict, downplaying, grounding of amounts/percentages/addresses, invented transfers, hedge for incomplete checks, coverage of findings and SOL transfers).
-- `app/lib/ai/template.ts` (built-in explanation, passes the same validator) and `app/lib/ai/explain.ts` (cache of accepted answers keyed by the exact facts, 6 h; notices; `explainerFromEnv`: AI_ENABLED=false or no key -> built-in, no call).
-- `/api/analyze`: analysis cache (10 min, 200, tx + userAddress), `fresh: true` = Check again, per-IP rate limit 10/min (cached answers and bad requests free, 429 + Retry-After), `maxDuration = 40`. `app/lib/server-state.ts`, `app/lib/util/cache.ts`, `app/lib/util/rate-limit.ts`, `app/lib/gaps.ts`.
-- UI: `explanation-panel.tsx` beside the VerdictCard ("AI explanation" + model, or "Built-in explanation" + reason), "Saved result from ..." note and **Check again** button.
-- `scenarios:check -- --ai` (live explanation step); default stays AI off.
+### M6 (polish, accessibility, README, learning notes, saved replay)
+- **Saved results:** `npm run fixtures:save` (`scripts/save-fixtures.ts`, `app/lib/replay/saved-results.ts`) saves the AnalyzeResponse from the same pipeline and JSON conversion as `/api/analyze` to `data/fixtures/<scenario>.json`, with capture time, cluster, data source (live or recorded) and the unsigned transaction. Saved only when the simulation ran and the verdict matches. A refresh never replaces a better capture (AI explanation first, then live over recorded). Options: scenario list, `--ai`, `--offline`.
+- **Captured (live devnet, 7 Nov 14:42 IST):** S1-S8, all verdicts as expected. **S3 and S8 with accepted Gemini explanations** (model version gemini-3.6-flash); the others with the built-in text (AI off). Re-runs kept both AI captures byte-identical (AI off; and AI with an invalid key -> AI_AUTH -> "KEPT").
+- **Replay:** `GET /api/examples` (list) and `?id=` (one), reading only `data/fixtures` (the build traces exactly those 8 files). The page shows a "Saved result from (time)" banner above the verdict and a "Saved result" tag in the verdict card. Check again on a replay runs a new check. A failed demo build or a demo check without devnet offers that scenario's saved result.
+- **Verified after a restart** of the production server with the RPC on a closed port and all outbound HTTPS through a dead proxy (devnet and Gemini unreachable): replays byte-identical to the saved files (capture time, verdict, completeness, explanation source and model kept); a live check on the same server honestly gives "Could not fully check" with the built-in explanation in 1.9 s; server log has codes only.
+- **UI states (ARCHITECTURE 11):** streamed progress (`stream: true`, NDJSON): Done / Running / Waiting per step, the verdict shown as soon as the rules have run ("Writing the plain-English explanation... The verdict is already final."); errors in plain words with Try again (repeats the exact request; after a 429 it counts down from Retry-After); "New check, finished in ..." / "Cached result from ..." / "Saved result from ..." notes; raw JSON (rendered only when opened, copyable); screen-reader status line when a check finishes; the page scrolls the progress, then the verdict, into view.
+- **Real-browser review** (Chrome via Playwright + axe-core, outside the repo; `docs/QA.md`): 375 px and 1280 px, dark and light, live (AI off) and with devnet and Gemini unreachable. S1, S3, S8, S7, an incomplete check, a very long memo, invalid input, copy buttons, keyboard and focus, Check again, Try again, the rate limit, slow network, replays. 64 checks passed after fixing 4 problems the review found (copy-button accessible name, stretched verdict card, verdict below the fold, countdown off by one second).
+- **Docs:** README rewritten per ARCHITECTURE 16 (Windows/npm setup, demo commands, how the rules decide, what simulation can and cannot establish, Gemini and the fallback, how to recognise new, cached and saved results, security, limitations, credits, license); `docs/LEARNING_NOTES.md` reorganised into four parts with the M6 topics; `docs/QA.md` added. Template credit and both MIT notices kept (`LICENSE`).
 
-### M5 results, by source
-**Live provider (Gemini REST, 7 Nov 2026, primary gemini-3.5-flash served as gemini-3.6-flash):**
-- Field check: `thinkingLevel` MINIMAL accepted by the primary (0 thought tokens vs 167 without), rejected by gemini-flash-latest (400 naming the level); `responseJsonSchema` and `responseSchema` both accepted; invalid key -> HTTP 400 `API_KEY_INVALID`; unknown model -> 404.
-- `scenarios:check -- --ai` run 1: **7/8 explanations accepted from Gemini**, including **S3** (explains the 0.01 SOL payment and the separate unlimited permission, "No tokens move right now") and **S8** (Danger kept; memo mentioned only as sender text; no "safe"); S2 fell back (`SIGNING_ADVICE`), traced to a validator false positive and fixed with a regression test built from that exact answer.
-- Through the running `/api/analyze` route: S3 accepted (both parts explained), repeat served from the cache (`cache.hit`), Check again re-asked Gemini (accepted, different wording), **S8 accepted from Gemini, verdict Danger**. Server log contained no key, prompt or memo text.
-- Bogus key (live): one call, HTTP 400 INVALID_ARGUMENT -> built-in with AI_AUTH, log "check GEMINI_API_KEY", key not logged. AI_ENABLED=false: zero calls.
-- `scenarios:check -- --ai` run 2 (after the quota ran out): primary 429 `RESOURCE_EXHAUSTED` (daily), fallback 503/timeouts -> built-in explanations for 7/8 (S6 still got through); all 8 verdicts unchanged.
-**Mocked (offline tests):** invalid JSON, schema/format errors, 401/403/400 API_KEY_INVALID, 429, 503, timeouts, network errors, 404 -> fallback, 400 thinking step-down (remembered), 400 strip-and-retry, deadline (none / mid-way / real hanging attempt cut off), blocked answer, AI off, not configured, cache reuse / Check again / different facts never reuse, "go ahead and sign" for Danger -> built-in shown in the UI.
-**Built-in fallback:** used for AI off, missing key, rejected answers and provider failures; its text passes the validator for all 14 fixtures; "Could not fully check" and "Danger with incomplete evidence" pages keep the gap visible in the VerdictCard, the "What could not be checked" panel and the explanation.
+### M6 results, by source
+- **Live devnet:** `fixtures:save` S1-S8 (8/8 saved), `scenarios:check` AI off 8/8 at the checkpoint.
+- **Live Gemini:** S3 accepted at the first attempt; S8 accepted after one timeout and a retry. About 3 of today's 20 requests used. Plus one call with a deliberately invalid key (rejected, AI_AUTH), which does not use project quota.
+- **Browser (Chrome):** see `docs/QA.md`.
+- **Offline tests:** saved-result format, replace rule, replay route (no network calls), streamed route, page states.
 
-## Test and check status (end of M5)
-- `npm run check`: pass (typecheck clean, lint clean, **270/270 tests** in 21 files: risk-rules 48, decode 29, ai-validate 24, ai-gemini 24, simulation-units 19, scenarios 15, risk-pipeline 14, ai-pipeline 13, scenarios-replay 12, simulate-pipeline 11, format 10, analyze-route 9, scripts 8, state-diff 7, explanation-ui 5, cache-rate-limit 5, verdict-ui 4, simulation-ui 4, analyze-route-cache 4, instruction-list 3, scenario-buttons 2).
+## Test and check status (end of M6)
+- `npm run check`: pass (typecheck clean, lint clean, **299/299 tests** in 23 files; new: saved-results 17, checker-ui 8, 4 streaming tests in analyze-route-cache).
+- Offline replay suites (saved-results, scenarios-replay, risk-pipeline, simulate-pipeline, ai-pipeline, analyze-route-cache, checker-ui): 83/83.
 - `npm run build`: pass, no warnings.
-- `npm run scenarios:check` (AI off, live devnet): 8/8. Fixture regressions (scenarios-replay, risk-pipeline, simulate-pipeline, ai-pipeline): pass.
+- `npm run scenarios:check` (AI off, live devnet): 8/8.
 - `npm run scan:secrets`: clean.
 
 ## Partially implemented work
-- M6 started Sat 7 Nov 14:30 IST.
-  - Done and verified (15:00): `fixtures:save` (live, `--ai`, `--offline`), `data/fixtures/` for S1-S8 captured live on devnet at 14:42 IST, **S3 and S8 with accepted Gemini explanations** (model version gemini-3.6-flash); replay route and page (banner above the verdict); streamed step progress with the verdict shown before the explanation; Try again, rate-limit countdown, raw JSON. Replays verified after a restart of the production server with the RPC and Gemini unreachable (byte-identical to the saved files).
-  - Done and verified (15:20): real-browser review in Chrome (Playwright + axe-core, outside the repo) at 375 px and 1280 px, dark and light, on two production servers (live devnet with AI off; RPC and Gemini unreachable): 64 checks passed after fixing 4 problems it found. Results, fixes and the remaining human checks are in `docs/QA.md`. `samples:print` now also prints a long-memo transaction.
-  - Next: README and learning notes, then the M6 checkpoint.
+- None.
 
-## Next three steps (once M6 is approved)
-1. UI states and accessibility pass (keyboard, 375 px, contrast, loading per step), user browser check of the result page.
-2. `scripts/save-fixtures.ts` (`fixtures:save`) and a "Replay saved example" option, labelled with the time it was saved; ideally captured when Gemini quota is available so replays include accepted AI explanations.
-3. README draft per ARCHITECTURE 16, `docs/LEARNING_NOTES.md` review, and the manual QA list from ARCHITECTURE 13.
+## Next three steps (once approved)
+1. M7, if the user approves it: the chosen stretch item (recommendation: Vercel deploy first; F3 is the most work).
+2. M8: `docs/DEMO_SCRIPT.md` (2-3 min) and `docs/DEVPOST.md` (MLH Challenges text), final QA, freeze.
+3. Recording (plan A + D): after the daily Gemini reset (about 13:30 IST), record S1, S3, S5 or S4, S8 live with AI on (about 4 requests; the 6 h explanation cache reuses answers); if the network fails, use "Replay a saved result".
+
+## Remaining checks that need the user
+- The five steps in `docs/QA.md`, "What still needs a person": the look in your own Chrome (dark and light), 375 px via DevTools device mode, the replay banner, one AI-on check (1 request), optionally a screen reader.
+- Optional: also save S1 and S5 with AI explanations for the replay backup: `npm run fixtures:save -- s1 s5 --ai` (2 requests).
+- Read the MLH Challenges rules (video length, required fields).
 
 ## Known issues
-- **Gemini free tier: 20 requests per day for gemini-3.5-flash** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), used up on 7 Nov (reset about 14:00 IST, midnight Pacific). The fallback gemini-flash-latest was overloaded all session. Until the reset, explanations fall back to the built-in text (verdicts unaffected). See "Decisions awaiting the user".
-- Each live AI call took about 6.5-7.7 s inside the route (well within the 35 s deadline).
-- The rate limit (10 fresh checks/min/IP) can be hit when clicking many scenarios quickly while recording.
-- Without any RPC, owner-dependent findings are "could not be verified" (by design).
-- Windows `git` CRLF warnings; npm 11 skipped `esbuild` postinstall (tsx works); 8 moderate `npm audit` advisories in template deps; stopping a background `next dev` on Windows leaves a child process on the port.
-- Result pages not yet checked by the user in a browser (looks, keyboard, 375 px) - M6.
+- **Gemini free tier: 20 requests per day for gemini-3.5-flash** (resets at midnight Pacific, about 13:30 IST). Beyond that, explanations fall back to the built-in text (verdicts unaffected).
+- The AI-on path was not run in the browser review (routine checks stay AI-off); it is covered by the live S3/S8 captures, the M5 route checks and mocked UI tests.
+- The rate limit (10 fresh checks/min/IP) can be hit when clicking quickly while recording; cached results and replays do not count.
+- Without any RPC, owner-dependent findings are "could not be verified" (by design), so S3/S8 checked offline give "Could not fully check".
+- `npm run ci` (template script) includes `format:check`, which fails because the code is not Prettier-formatted (Prettier's 80-column wrap was never applied); `npm run check` is the project's gate.
+- Windows `git` CRLF warnings; npm 11 skipped `esbuild` postinstall (tsx works); 8 moderate `npm audit` advisories in template deps; stopping a background `next dev`/`next start` on Windows leaves a child process on the port (stop it by port).
 
 ## Environment variables (names only; values live in `.env.local`, which the user creates)
 - Server-only: `SOLANA_RPC_URL` (required), `SOLANA_RPC_FALLBACK_URL`, `GEMINI_API_KEY` (required unless `AI_ENABLED=false`), `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `AI_ENABLED`.
@@ -81,18 +81,17 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 
 ## How to run and verify
 - `npm install`; `.env.local` from `.env.example` (the user fills values; never print the file); `npm run check:env`.
-- `npm run dev` -> http://localhost:3000, click a scenario button or paste a transaction; "Check again" re-runs without the cache.
-- `npm run check`, `npm run build`, `npm run scenarios:check` (AI off), `npm run scan:secrets` before every push. `npm run scenarios:check -- --ai` uses 8 Gemini requests (of 20/day).
+- `npm run dev` -> http://localhost:3000; click a scenario button, paste a transaction, or open "Replay a saved result". "Check again" always runs a new check.
+- `npm run check`, `npm run build`, `npm run scenarios:check` (AI off), `npm run scan:secrets` before every push.
+- `npm run fixtures:save` (AI off) refreshes the saved results without touching the AI captures; `-- s3 s8 --ai` uses Gemini quota.
+- Restart test without touching `.env.local`: start `npx next start -p 3123` with `SOLANA_RPC_URL=http://127.0.0.1:9 SOLANA_RPC_FALLBACK_URL=http://127.0.0.1:9 NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 NO_PROXY=localhost,127.0.0.1` in the environment; replays must still work.
 
 ## Unpushed local commits
-- None (the M5 checkpoint commit is pushed; verify with `git status -sb`).
+- None after the M6 checkpoint push (verify with `git status -sb`).
 
 ## Decisions awaiting the user
-- **Gemini quota for the demo** (20 requests/day on the primary model). Options, no paid options suggested:
-  - A: record after the daily reset (about 14:00 IST) and keep Gemini calls for the demo itself (the 6 h explanation cache reuses answers for the same findings).
-  - B: the user creates a second free key in another Google Cloud project (quota is per project) and pastes it into `.env.local` themself.
-  - C: switch `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` to models with their own free quota (needs a live check after the reset).
-  - D: rely on saved replays (M6 fixtures) captured while quota is available, labelled as saved.
+- **M7:** approve it and pick F3, F4 or a Vercel deploy, or skip to M8.
+- Whether to also save S1 and S5 with AI explanations (2 Gemini requests).
 - Read the MLH Challenges rules when convenient.
 
 ## Decided by the user

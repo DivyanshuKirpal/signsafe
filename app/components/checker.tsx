@@ -55,6 +55,7 @@ export function Checker() {
   const [state, setState] = useState<State>({ status: "idle" });
   const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
   const [examples, setExamples] = useState<SavedResultSummary[]>([]);
+  const [aiOff, setAiOff] = useState(false);
   const [now, setNow] = useState(0);
   const [announcement, setAnnouncement] = useState("");
   const [scrollTo, setScrollTo] = useState<{ target: "status" | "result" } | null>(null);
@@ -77,8 +78,10 @@ export function Checker() {
     let cancelled = false;
     fetch("/api/examples")
       .then((res) => (res.ok ? res.json() : null))
-      .then((body: { examples?: SavedResultSummary[] } | null) => {
-        if (!cancelled && Array.isArray(body?.examples)) setExamples(body.examples);
+      .then((body: { examples?: SavedResultSummary[]; ai?: string } | null) => {
+        if (cancelled) return;
+        if (Array.isArray(body?.examples)) setExamples(body.examples);
+        setAiOff(body?.ai === "off");
       })
       .catch(() => {});
     return () => {
@@ -244,6 +247,9 @@ export function Checker() {
   }
 
   const busy = state.status === "loading";
+  // On a server without AI (the public demo), point to the live check and to the saved Gemini results.
+  const hasSavedAi = (id: string) => examples.some((e) => e.id === id && e.explanationSource === "ai");
+  const showDemoHint = aiOff && hasSavedAi("s3-hidden-approval") && hasSavedAi("s8-memo-injection");
   const view =
     state.status === "success"
       ? { stage: state.result as VerdictStage, result: state.result }
@@ -272,8 +278,23 @@ export function Checker() {
         }}
         busy={busy}
       />
-      <ScenarioButtons busy={busy} onPick={(scenario) => void run({ kind: "scenario", scenario })} />
-      <SavedResultsPicker examples={examples} busy={busy} onReplay={(id) => void run({ kind: "replay", id })} />
+      <ScenarioButtons
+        busy={busy}
+        onPick={(scenario) => void run({ kind: "scenario", scenario })}
+        note={
+          showDemoHint ? (
+            <p role="note" className="text-sm">
+              Try S3 for a live safety check. Open the S3 or S8 saved replay to see how Gemini explained the result.
+            </p>
+          ) : null
+        }
+      />
+      <SavedResultsPicker
+        examples={examples}
+        busy={busy}
+        onReplay={(id) => void run({ kind: "replay", id })}
+        defaultOpen={showDemoHint}
+      />
 
       <p role="status" className="sr-only">
         {announcement}

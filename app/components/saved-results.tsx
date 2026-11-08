@@ -5,20 +5,25 @@ import type { SavedResultSummary } from "../lib/replay/saved-results";
 
 /**
  * "Replay a saved result" (ARCHITECTURE 12.6): for recording when the network
- * fails. Collapsed by default; every replay is labelled as saved on the result page.
+ * fails. Collapsed by default, but opened from the start on a server without AI
+ * (the public demo), where the hint points judges here. Every replay is labelled
+ * as saved on the result page.
  */
 export function SavedResultsPicker({
   examples,
   busy,
   onReplay,
+  defaultOpen = false,
 }: {
   examples: SavedResultSummary[];
   busy: boolean;
   onReplay: (id: string) => void;
+  /** Open from the start (the public demo points judges here). */
+  defaultOpen?: boolean;
 }) {
   if (examples.length === 0) return null;
   return (
-    <details className="rounded-lg border border-border p-3 text-sm">
+    <details open={defaultOpen || undefined} className="rounded-lg border border-border p-3 text-sm">
       <summary className="cursor-pointer font-medium">
         Replay a saved result <span className="font-normal text-muted">(works without the network)</span>
       </summary>

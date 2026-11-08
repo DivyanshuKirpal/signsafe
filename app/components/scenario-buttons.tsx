@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 export interface ScenarioSummary {
   id: string;
@@ -18,10 +18,12 @@ interface Props {
   busy: boolean;
   /** Builds the scenario transaction, puts it in the paste box and runs the normal check. */
   onPick: (scenario: ScenarioSummary) => void;
+  /** Optional short note shown under the buttons (for example the public-demo hint). */
+  note?: ReactNode;
 }
 
 /** One button per demo scenario. The buttons show only what a website would claim. */
-export function ScenarioButtons({ busy, onPick }: Props) {
+export function ScenarioButtons({ busy, onPick, note }: Props) {
   const [scenarios, setScenarios] = useState<ScenarioSummary[]>([]);
   const [ready, setReady] = useState<boolean | null>(null);
 
@@ -60,6 +62,7 @@ export function ScenarioButtons({ busy, onPick }: Props) {
           </button>
         ))}
       </div>
+      {note}
     </section>
   );
 }

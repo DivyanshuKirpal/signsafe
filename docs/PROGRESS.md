@@ -22,7 +22,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M5 AI | Completed and verified (Sat 7 Nov ~04:40 IST), effort max, from c8f58de |
 | M6 Polish | **Completed and verified** (Sat 7 Nov ~15:35 IST). Approved by the user for M6 only (effort high), started from 66615b7. |
 | Security fix step (between M6 and M7) | **Completed and verified** (Sun 8 Nov ~06:15 IST), commit e908a9a. Requested by the user after the review in `docs/SECURITY_REVIEW.md`: M2-M5, L1, L5, the no-framing and nosniff headers (L6), and M1 per instance. Not a milestone; no deploy. |
-| M7 Stretch | **Still awaiting the user's explicit approval and choice. Do not start, and do not deploy.** ARCHITECTURE 14: the user picks F3 (check with Phantom before signing), F4 (explain a confirmed transaction by signature) or a Vercel deploy, or skips to M8. |
+| M7 Stretch | **In progress.** Approved by the user on Sun 8 Nov (~18:10 IST): Vercel deploy from GitHub main only (F3 and F4 out of scope). Production: Node 24.x, AI_ENABLED=false, no Gemini key. Repo prepared; waiting for the user's Vercel import and the public URL, then the deployed-site checks. Stop before M8. ARCHITECTURE 14: the user picks F3 (check with Phantom before signing), F4 (explain a confirmed transaction by signature) or a Vercel deploy, or skips to M8. |
 | M8 Submit | Not approved |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
@@ -65,7 +65,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - `npm run scan:secrets`: clean.
 
 ## Partially implemented work
-- None.
+- M7: code and config ready (Node 24.x, headers, explicit file tracing, `/api/health`, judges' hint, saved labels; 332 tests, build clean). Next: the user imports the repo in Vercel and sends the production URL; then verify S1/S3/S8 fresh checks, S3/S8 replays, headers, forwarded IP and function duration; add the URL to README and DEVPOST; checkpoint.
 
 ## Next three steps (once approved)
 1. M7, if the user approves it: the chosen stretch item (recommendation: Vercel deploy first; F3 is the most work).

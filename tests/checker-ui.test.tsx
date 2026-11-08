@@ -140,8 +140,10 @@ describe("saved result replay", () => {
     const verdict = screen.getByRole("heading", { name: LABEL });
     expect(banner.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("A replay, not a new check")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "AI explanation" })).toBeTruthy();
-    expect(screen.getByText(`model ${S3.response.explanation.model}`)).toBeTruthy();
+    // The explanation itself says it is saved, with the recorded model version and the capture time.
+    expect(screen.getByRole("heading", { name: "AI explanation (saved)" })).toBeTruthy();
+    expect(screen.getByText(new RegExp(`^model ${S3.response.explanation.model}, saved `))).toBeTruthy();
+    expect(screen.getByText(/Written by AI when this result was saved/)).toBeTruthy();
     expect(screen.getByText(S3.response.explanation.summary)).toBeTruthy();
     expect(screen.getByText(/Demo scenario S3: what it really was/)).toBeTruthy();
     expect(analyzeBodies()).toEqual([]);
@@ -168,7 +170,8 @@ describe("saved result replay", () => {
   });
 
   test("Check again on a replay runs a fresh check of the saved transaction", async () => {
-    mockFetch(() => json(RESULT));
+    const BUILT_IN = { ...RESULT, explanation: { source: "template", summary: "Danger.", points: [], advice: "Do not sign this unless you are certain.", notice: { code: "AI_OFF", message: "AI explanations are switched off on this server." } } };
+    mockFetch(() => json(BUILT_IN));
     render(<Checker />);
     fireEvent.click(await screen.findByRole("button", { name: /S3 saved/ }));
     await screen.findByRole("heading", { name: /^Saved result from / });
@@ -176,6 +179,9 @@ describe("saved result replay", () => {
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await screen.findByText(/^New check/);
     expect(screen.queryByText("A replay, not a new check")).toBeNull();
+    // A fresh check on a server without AI: the plain built-in label, nothing about saving.
+    expect(screen.getByRole("heading", { name: "Built-in explanation" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /(saved)/ })).toBeNull();
     expect(analyzeBodies()).toEqual([{ input: { kind: "base64", tx: S3.txBase64 }, fresh: true, stream: true }]);
   });
 
@@ -235,5 +241,33 @@ describe("errors", () => {
     const bodies = analyzeBodies();
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toEqual(bodies[0]);
+  });
+});
+
+describe("public demo hint", () => {
+  const list = (ai: "on" | "off") =>
+    json({
+      ai,
+      examples: [
+        { id: "s3-hidden-approval", code: "S3", pitch: REVEAL.pitch, capturedAt: S3.capturedAt, devnetData: "live", explanationSource: "ai" },
+        { id: "s8-memo-injection", code: "S8", pitch: "Verified token approval", capturedAt: S3.capturedAt, devnetData: "live", explanationSource: "ai" },
+      ],
+    });
+  const HINT = "Try S3 for a live safety check. Open the S3 or S8 saved replay to see how Gemini explained the result.";
+
+  test("on a server without AI, the hint sits by the demo buttons and the replay list is open", async () => {
+    mockFetch(() => json(RESULT), { "GET /api/examples": () => list("off") });
+    const { container } = render(<Checker />);
+    expect((await screen.findByText(HINT)).getAttribute("role")).toBe("note");
+    expect(container.querySelector("details")?.open).toBe(true);
+    expect(screen.getByRole("button", { name: /^S8 saved/ })).toBeTruthy();
+  });
+
+  test("with the AI on (local recording), no hint and the replay list stays collapsed", async () => {
+    mockFetch(() => json(RESULT), { "GET /api/examples": () => list("on") });
+    const { container } = render(<Checker />);
+    await screen.findByRole("button", { name: /^S8 saved/ });
+    expect(screen.queryByText(HINT)).toBeNull();
+    expect(container.querySelector("details")?.open).toBe(false);
   });
 });

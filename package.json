@@ -31,7 +31,7 @@
   "version": "0.0.0",
   "private": true,
   "engines": {
-    "node": ">=24"
+    "node": "24.x"
   },
   "dependencies": {
     "@solana-program/compute-budget": "^0.20.0",

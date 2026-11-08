@@ -353,8 +353,8 @@ describe("M4: demo builds are rate limited per IP", () => {
   });
 });
 
-describe("L6: security headers", () => {
-  test("every path gets no-framing and nosniff headers", async () => {
+describe("L6 and M7: security headers", () => {
+  test("every path gets no-framing, nosniff and referrer-policy headers", async () => {
     const rules = await nextConfig.headers!();
     expect(rules).toEqual([{ source: "/:path*", headers: SECURITY_HEADERS }]);
     const byKey = Object.fromEntries(SECURITY_HEADERS.map((h) => [h.key, h.value]));
@@ -362,6 +362,15 @@ describe("L6: security headers", () => {
       "Content-Security-Policy": "frame-ancestors 'none'",
       "X-Frame-Options": "DENY",
       "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    });
+  });
+
+  test("no X-Powered-By header; the data files the functions read are shipped explicitly", () => {
+    expect(nextConfig.poweredByHeader).toBe(false);
+    expect(nextConfig.outputFileTracingIncludes).toEqual({
+      "/api/scenarios": ["./data/demo.devnet.json"],
+      "/api/examples": ["./data/fixtures/*.json"],
     });
   });
 });

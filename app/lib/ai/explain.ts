@@ -144,6 +144,16 @@ export function createGeminiExplainer(
   };
 }
 
+/**
+ * Whether this server asks Gemini at all: "off" when AI_ENABLED is false (any
+ * case or spacing) or no real key is set. The public deployment runs "off".
+ */
+export function aiMode(env: Record<string, string | undefined> = process.env): "on" | "off" {
+  if (env.AI_ENABLED?.trim().toLowerCase() === "false") return "off";
+  const apiKey = env.GEMINI_API_KEY?.trim();
+  return apiKey && !apiKey.includes("REPLACE_ME") ? "on" : "off";
+}
+
 /** AI_ENABLED=false -> built-in only; no key -> built-in only; else Gemini with the configured models. */
 export function explainerFromEnv(
   env: Record<string, string | undefined> = process.env,

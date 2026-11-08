@@ -21,7 +21,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M4 Scenarios | Completed and verified (Sat 7 Nov ~03:10 IST) |
 | M5 AI | Completed and verified (Sat 7 Nov ~04:40 IST), effort max, from c8f58de |
 | M6 Polish | **Completed and verified** (Sat 7 Nov ~15:35 IST). Approved by the user for M6 only (effort high), started from 66615b7. |
-| Security fix step (between M6 and M7) | **Completed and verified** (Sun 8 Nov ~06:15 IST). Requested by the user after the review in `docs/SECURITY_REVIEW.md`: M2-M5, L1, L5, the no-framing and nosniff headers (L6), and M1 per instance. Not a milestone; no deploy. |
+| Security fix step (between M6 and M7) | **Completed and verified** (Sun 8 Nov ~06:15 IST), commit e908a9a. Requested by the user after the review in `docs/SECURITY_REVIEW.md`: M2-M5, L1, L5, the no-framing and nosniff headers (L6), and M1 per instance. Not a milestone; no deploy. |
 | M7 Stretch | **Still awaiting the user's explicit approval and choice. Do not start, and do not deploy.** ARCHITECTURE 14: the user picks F3 (check with Phantom before signing), F4 (explain a confirmed transaction by signature) or a Vercel deploy, or skips to M8. |
 | M8 Submit | Not approved |
 

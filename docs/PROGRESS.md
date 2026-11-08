@@ -22,11 +22,11 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M5 AI | Completed and verified (Sat 7 Nov ~04:40 IST), effort max, from c8f58de |
 | M6 Polish | **Completed and verified** (Sat 7 Nov ~15:35 IST). Approved by the user for M6 only (effort high), started from 66615b7. |
 | Security fix step (between M6 and M7) | **Completed and verified** (Sun 8 Nov ~06:15 IST), commit e908a9a. Requested by the user after the review in `docs/SECURITY_REVIEW.md`: M2-M5, L1, L5, the no-framing and nosniff headers (L6), and M1 per instance. Not a milestone; no deploy. |
-| M7 Stretch | **In progress.** Approved by the user on Sun 8 Nov (~18:10 IST): Vercel deploy from GitHub main only (F3 and F4 out of scope). Production: Node 24.x, AI_ENABLED=false, no Gemini key. Repo prepared; waiting for the user's Vercel import and the public URL, then the deployed-site checks. Stop before M8. ARCHITECTURE 14: the user picks F3 (check with Phantom before signing), F4 (explain a confirmed transaction by signature) or a Vercel deploy, or skips to M8. |
-| M8 Submit | Not approved |
+| M7 Stretch | **Completed and verified** (Sun 8 Nov ~18:35 IST). Approved by the user for M7 only: Vercel deploy from GitHub main (F3 and F4 out of scope). Live at **https://signsafe-chi.vercel.app** (Node 24.x, AI_ENABLED=false, no Gemini key). |
+| M8 Submit | **Awaiting the user's explicit approval. Do not start.** |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
-- **Next recommended effort (M7): high** for a Vercel deploy or F4; **xhigh** for F3 (wallet signing flow, security-sensitive). The deploy is public, so it needs the user's go-ahead and the user sets the keys in the Vercel dashboard (never in chat).
+- **Next recommended effort (M8): high.** Mostly writing and checking (DEMO_SCRIPT, the MLH Challenges text, final QA, freeze) under a hard deadline; no risky code. The initial submission target is 7:30 PM IST (official 8:30 PM), final 9:15 PM (official 10:15 PM).
 
 ## Completed and verified
 ### M0-M5 (summary)
@@ -51,27 +51,33 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - Verified: 325/325 tests (26 new, the 5 main fixes mutation-checked); `scenarios:check` AI off 8/8 live; all 8 saved results match a live re-check of the same transactions; build clean; a local `next start` served the headers and answered text/plain with 415. Docs: README (security notes, limits, AI budget), `docs/SECURITY_REVIEW.md` "Resolved" section, LEARNING_NOTES, DECISIONS.
 - Still open from the review (not in this step's scope): L2, L3, L4, L7, L8, L9 (Vercel settings at deploy), `X-Powered-By`/Referrer-Policy (rest of L6), I1-I4.
 
+### M7 (Vercel deployment, Sun 8 Nov)
+- **Prepared** (commit 5cb1371): Node 24.x in `engines` and the lockfile; `poweredByHeader: false` and `Referrer-Policy: strict-origin-when-cross-origin` next to the existing frame-ancestors / X-Frame-Options / nosniff; `outputFileTracingIncludes` for `data/demo.devnet.json` and `data/fixtures/*.json`; `GET /api/health` (cluster, AI on/off, commit); the judges' hint under the demo buttons and the replay list opened when the AI is off; saved explanations labelled "(saved)" with model version and capture time. S3/S8 captures untouched (same git blobs 2f29a9f, 5efa698).
+- **Deployed by the user** from GitHub main: Production variables `SOLANA_RPC_URL` (Sensitive), `SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com`, `AI_ENABLED=false`; no Gemini key, no `NEXT_PUBLIC_` variable. The user verified the site in a browser (health, S1/S3/S8, both replays, S3 Check again).
+- **Verified from here over HTTP** (8 Nov ~18:30 IST): `/api/health` 200 with commit 5cb1371 and AI off. Fresh checks (devnet, primary RPC, built-in explanation AI_OFF): S1 "No known risks found" (1.2 s), S3 Danger (0.4 s), S8 Danger (0.4 s). S3 findings: "Send 0.01 SOL from 4gow...pj9r to F61U...AG9Y." and "Allow 59WC...v3ZB to spend UNLIMITED (u64 max)..." (flag R-APPROVE), and the built-in text covers both. Replays S3 and S8: Gemini explanation, model gemini-3.6-flash, original capture times 2026-11-07T09:12:45.690Z and 09:13:04.617Z, identical to the saved files; Check again on each gave a fresh devnet check with the built-in explanation. Headers on pages and API: CSP frame-ancestors 'none', X-Frame-Options DENY, nosniff, Referrer-Policy strict-origin-when-cross-origin, no X-Powered-By (Vercel adds HSTS).
+- **Forwarded IP (observed):** fresh checks sent with a different fake `x-forwarded-for` and `x-real-ip` each were still counted against the real client IP: after 5 earlier fresh checks, the 6th spoofed request got 429 (Retry-After 40). Vercel replaces those headers, so the limiter keys on the real IP. All requests ran in region iad1 (via the bom1 edge), apparently one warm instance (the count matched exactly 10).
+- **Function duration (configuration only):** `/api/analyze` sets `maxDuration = 40`; observed checks finish in 0.4-1.2 s. The effective limit could not be observed from outside (no request comes near it); per Vercel's documentation as I know it, 40 s is within the Hobby plan's limit. The deployment's function details in the Vercel dashboard show the applied value.
+
 ### M6 results, by source
 - **Live devnet:** `fixtures:save` S1-S8 (8/8 saved), `scenarios:check` AI off 8/8 at the checkpoint.
 - **Live Gemini:** S3 accepted at the first attempt; S8 accepted after one timeout and a retry. About 3 of today's 20 requests used. Plus one call with a deliberately invalid key (rejected, AI_AUTH), which does not use project quota.
 - **Browser (Chrome):** see `docs/QA.md`.
 - **Offline tests:** saved-result format, replace rule, replay route (no network calls), streamed route, page states.
 
-## Test and check status (after the security fix step, Sun 8 Nov)
-- `npm run check`: pass (typecheck clean, lint clean, **325/325 tests** in 24 files; new: hardening 21, 4 budget/prompt tests in ai-gemini, 1 page test for a rate-limited build).
+## Test and check status (end of M7, Sun 8 Nov)
+- `npm run check`: pass (typecheck clean, lint clean, **332/332 tests** in 25 files; M7 added production-config 4, two page tests for the judges' hint, header tests).
 - Offline replay suites (saved-results, scenarios-replay, risk-pipeline, simulate-pipeline, ai-pipeline, analyze-route-cache, checker-ui): 83/83.
 - `npm run build`: pass, no warnings.
 - `npm run scenarios:check` (AI off, live devnet): 8/8.
 - `npm run scan:secrets`: clean.
 
 ## Partially implemented work
-- M7: code and config ready (Node 24.x, headers, explicit file tracing, `/api/health`, judges' hint, saved labels; 332 tests, build clean). Next: the user imports the repo in Vercel and sends the production URL; then verify S1/S3/S8 fresh checks, S3/S8 replays, headers, forwarded IP and function duration; add the URL to README and DEVPOST; checkpoint.
+- None.
 
 ## Next three steps (once approved)
-1. M7, if the user approves it: the chosen stretch item (recommendation: Vercel deploy first; F3 is the most work).
-2. M8: `docs/DEMO_SCRIPT.md` (2-3 min) and `docs/DEVPOST.md` (MLH Challenges text), final QA, freeze.
-3. Before a deploy (if chosen for M7): in Vercel set `SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com`, use the separate Gemini key, mark keys Sensitive and Production-only, deploy from GitHub (`docs/SECURITY_REVIEW.md` L9).
-4. Recording (plan A + D): after the daily Gemini reset (about 13:30 IST), record S1, S3, S5 or S4, S8 live with AI on (about 4 requests; the 6 h explanation cache reuses answers); if the network fails, use "Replay a saved result".
+1. M8 (once approved): `docs/DEMO_SCRIPT.md` (2-3 min) and the MLH Challenges text in `docs/DEVPOST.md` (links and the verified public-demo description are already there), final QA, freeze.
+2. Recording (plan A + D): locally with AI on after the daily Gemini reset (about 13:30 IST), S1, S3, S5 or S4, S8; the public site and saved replays as backup.
+3. Submit on MLH Challenges with the live URL, the repo URL and the video; select the AI Track.
 
 ## Remaining checks that need the user
 - The five steps in `docs/QA.md`, "What still needs a person": the look in your own Chrome (dark and light), 375 px via DevTools device mode, the replay banner, one AI-on check (1 request), optionally a screen reader.
@@ -99,10 +105,10 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - Restart test without touching `.env.local`: start `npx next start -p 3123` with `SOLANA_RPC_URL=http://127.0.0.1:9 SOLANA_RPC_FALLBACK_URL=http://127.0.0.1:9 NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 NO_PROXY=localhost,127.0.0.1` in the environment; replays must still work.
 
 ## Unpushed local commits
-- None after the security fix step push (verify with `git status -sb`).
+- None after the M7 checkpoint push (verify with `git status -sb`).
 
 ## Decisions awaiting the user
-- **M7:** approve it and pick F3, F4 or a Vercel deploy, or skip to M8. The security fix step is done; nothing has been deployed.
+- **M8:** approve it (recommended effort: high). Nothing in M8 has started.
 - Whether to also save S1 and S5 with AI explanations (2 Gemini requests).
 - Read the MLH Challenges rules when convenient.
 

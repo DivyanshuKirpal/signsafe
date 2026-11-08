@@ -4,6 +4,12 @@ SignSafe shows what a Solana transaction will actually do before you sign it, an
 
 Built for the MLH Solana Hackathon (6-8 November 2026), AI Track. Devnet only.
 
+**Live demo: https://signsafe-chi.vercel.app**
+
+- **Live checks.** The public site checks every transaction live on Solana devnet: decode, simulation, account comparison and the rules verdict. Try S3, which looks like a 0.01 SOL payment but also grants an unlimited token permission.
+- **Explanations on the public site.** The AI is switched off there (`AI_ENABLED=false`), so every fresh check shows SignSafe's built-in explanation and makes no Gemini request.
+- **Gemini examples.** To see how Gemini explained a result, open the saved S3 or S8 replay under "Replay a saved result". Both were captured live on devnet with Gemini on 7 Nov 2026 and are labelled as saved, with their capture time and model version.
+
 ## The problem
 
 A wallet popup asks you to approve a transaction you cannot read. Drainer sites exploit that:
@@ -88,7 +94,7 @@ It **cannot** show:
 |---|---|
 | "New check, finished in 1.2 s (simulation 1.1 s, explanation 0 ms)." under the verdict | The transaction was just decoded, simulated and checked. |
 | "Cached result from (time): this exact check ran in the last 10 minutes." | The server reused its result for the identical transaction (kept 10 minutes). **Check again** runs a new check. |
-| A blue dashed box **SAVED RESULT** with "Saved result from (date, time, time zone)" above the verdict, and a "Saved result" tag in the verdict card | A replay of a result saved earlier with `npm run fixtures:save`. Nothing was simulated or sent to the AI just now, and devnet may have changed since. **Check again** runs a new check of the same transaction. |
+| A blue dashed box **SAVED RESULT** with "Saved result from (date, time, time zone)" above the verdict, a "Saved result" tag in the verdict card, and an explanation headed "AI explanation (saved)" or "Built-in explanation (saved)" with the model version and capture time | A replay of a result saved earlier with `npm run fixtures:save`. Nothing was simulated or sent to the AI just now, and devnet may have changed since. **Check again** runs a new check of the same transaction. |
 
 Saved results live in `data/fixtures/`. Each one keeps the original capture time, the cluster (devnet), the verdict, whether the check was complete, the explanation's source and the model version. A replay reads only that file, so it still works when the network is down. Use **Replay a saved result** under the demo buttons.
 
@@ -156,10 +162,19 @@ npm run live:check        # decode and simulate checks against existing devnet a
 
 `fixtures:save` saves a result only when the simulation ran and the verdict matches the scenario. A later run never replaces a better capture: an accepted AI explanation is kept when a refresh falls back to the built-in text.
 
+### Deploying (Vercel)
+
+The public demo is deployed from GitHub `main` on Vercel with Node.js 24.x and the default Next.js settings. Production environment variables (names only):
+- `SOLANA_RPC_URL`: a devnet RPC URL, marked Sensitive.
+- `SOLANA_RPC_FALLBACK_URL=https://api.devnet.solana.com`.
+- `AI_ENABLED=false`. There is no Gemini key on the public deployment.
+
+No `NEXT_PUBLIC_` variable is needed, and `setup:demo` never runs there; the demo accounts already exist on devnet, and their public addresses are in `data/demo.devnet.json`. `GET /api/health` reports the cluster, whether the AI is on, and the deployed commit.
+
 ## Tests
 
 ```
-npm run check          # typecheck + lint + 325 unit and UI tests (vitest), no network needed
+npm run check          # typecheck + lint + 332 unit and UI tests (vitest), no network needed
 npm run build          # production build
 npm run scan:secrets   # looks for real key patterns in tracked and staged files
 ```

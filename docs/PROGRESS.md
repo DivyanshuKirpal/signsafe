@@ -23,10 +23,10 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 | M6 Polish | **Completed and verified** (Sat 7 Nov ~15:35 IST). Approved by the user for M6 only (effort high), started from 66615b7. |
 | Security fix step (between M6 and M7) | **Completed and verified** (Sun 8 Nov ~06:15 IST), commit e908a9a. Requested by the user after the review in `docs/SECURITY_REVIEW.md`: M2-M5, L1, L5, the no-framing and nosniff headers (L6), and M1 per instance. Not a milestone; no deploy. |
 | M7 Stretch | **Completed and verified** (Sun 8 Nov ~18:35 IST). Approved by the user for M7 only: Vercel deploy from GitHub main (F3 and F4 out of scope). Live at **https://signsafe-chi.vercel.app** (Node 24.x, AI_ENABLED=false, no Gemini key). |
-| M8 Submit | **Awaiting the user's explicit approval. Do not start.** |
+| M8 Submit | **Ready to submit** (Sun 8 Nov ~19:20 IST). Approved by the user: submission copy, `docs/DEMO_SCRIPT.md` (under 2 min, S1 brief, S3 main, S8), full MLH Challenges text in `docs/DEVPOST.md`, final QA. **Frozen:** only fixes that block the demo or the submission; no commits or pushes after 10:15 PM IST. |
 
 - Approval rule: stop at the end of every milestone, report, recommend an effort level, and wait. Pre-approved ranges are recorded here; none so far.
-- **Next recommended effort (M8): high.** Mostly writing and checking (DEMO_SCRIPT, the MLH Challenges text, final QA, freeze) under a hard deadline; no risky code. The initial submission target is 7:30 PM IST (official 8:30 PM), final 9:15 PM (official 10:15 PM).
+- All milestones done. Remaining work is the user's: record the video, submit on MLH Challenges (initial due 8:30 PM IST, final 10:15 PM IST).
 
 ## Completed and verified
 ### M0-M5 (summary)
@@ -50,6 +50,12 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - `next.config.ts`: the user removed `allowedDevOrigins`; the only other leftover (missing final newline) was restored before the headers were added.
 - Verified: 325/325 tests (26 new, the 5 main fixes mutation-checked); `scenarios:check` AI off 8/8 live; all 8 saved results match a live re-check of the same transactions; build clean; a local `next start` served the headers and answered text/plain with 415. Docs: README (security notes, limits, AI budget), `docs/SECURITY_REVIEW.md` "Resolved" section, LEARNING_NOTES, DECISIONS.
 - Still open from the review (not in this step's scope): L2, L3, L4, L7, L8, L9 (Vercel settings at deploy), `X-Powered-By`/Referrer-Policy (rest of L6), I1-I4.
+
+### M8 (submission, Sun 8 Nov)
+- Submission copy printed in chat and saved in `docs/DEVPOST.md` (name, tagline, 96-word description leading with S3, URLs, Top 3 Overall + AI Track, built-with tags, credits: Claude Code for coding, ChatGPT for planning). README credits updated to match.
+- `docs/DEMO_SCRIPT.md`: about 1:50, local app with the AI on, S1 briefly, S3 as the main part, S8, close with the live URL; backup with the labelled saved replays if Gemini fails.
+- `docs/DEVPOST.md`: full MLH Challenges text (inspiration, what it does, how judges can try it, how we built it, challenges, accomplishments, what we learned, what's next, credits).
+- Final QA: 332/332 tests, build clean, secret scan clean, live `/api/health` ok.
 
 ### M7 (Vercel deployment, Sun 8 Nov)
 - **Prepared** (commit 5cb1371): Node 24.x in `engines` and the lockfile; `poweredByHeader: false` and `Referrer-Policy: strict-origin-when-cross-origin` next to the existing frame-ancestors / X-Frame-Options / nosniff; `outputFileTracingIncludes` for `data/demo.devnet.json` and `data/fixtures/*.json`; `GET /api/health` (cluster, AI on/off, commit); the judges' hint under the demo buttons and the replay list opened when the AI is off; saved explanations labelled "(saved)" with model version and capture time. S3/S8 captures untouched (same git blobs 2f29a9f, 5efa698).
@@ -75,9 +81,9 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - None.
 
 ## Next three steps (once approved)
-1. M8 (once approved): `docs/DEMO_SCRIPT.md` (2-3 min) and the MLH Challenges text in `docs/DEVPOST.md` (links and the verified public-demo description are already there), final QA, freeze.
-2. Recording (plan A + D): locally with AI on after the daily Gemini reset (about 13:30 IST), S1, S3, S5 or S4, S8; the public site and saved replays as backup.
-3. Submit on MLH Challenges with the live URL, the repo URL and the video; select the AI Track.
+1. The user records the demo locally with the AI on (`docs/DEMO_SCRIPT.md`; saved replays as the labelled backup).
+2. The user submits on MLH Challenges: copy from `docs/DEVPOST.md`, live URL https://signsafe-chi.vercel.app, repo https://github.com/DivyanshuKirpal/signsafe, video link; categories Top 3 Overall and AI Track.
+3. Freeze at 10:15 PM IST: no commits or pushes after it.
 
 ## Remaining checks that need the user
 - The five steps in `docs/QA.md`, "What still needs a person": the look in your own Chrome (dark and light), 375 px via DevTools device mode, the replay banner, one AI-on check (1 request), optionally a screen reader.
@@ -108,7 +114,7 @@ Source of truth for a fresh session. Read with `docs/DECISIONS.md`, `CLAUDE.md`,
 - None after the M7 checkpoint push (verify with `git status -sb`).
 
 ## Decisions awaiting the user
-- **M8:** approve it (recommended effort: high). Nothing in M8 has started.
+- None. Everything left (video, form) is for the user.
 - Whether to also save S1 and S5 with AI explanations (2 Gemini requests).
 - Read the MLH Challenges rules when convenient.
 

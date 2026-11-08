@@ -220,7 +220,7 @@ npm run scan:secrets   # looks for real key patterns in tracked and staged files
 - **Services.** The Google Gemini API writes the explanations. Devnet RPC comes from Helius, with the public Solana devnet endpoint as fallback.
 - **Review tools.** Playwright and axe-core were used for the browser review; they are not part of the app.
 - **Event.** MLH, for running the hackathon.
-- Built with help from Claude Code.
+- Built with help from Claude Code (coding) and ChatGPT (planning).
 
 ## License
 

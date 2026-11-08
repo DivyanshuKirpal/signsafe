@@ -1,11 +1,12 @@
 /**
  * Per-process server state for /api/analyze (ARCHITECTURE 9.7): the analysis
  * cache, the per-IP rate limiter, and the explainer built from the environment
- * (with its own cache of accepted AI explanations). In memory only.
+ * (with its own cache of accepted AI explanations and its AI budget), and the
+ * rate limiter for demo builds. In memory only: one set per server instance.
  */
 import { createHash } from "node:crypto";
 import { type Explainer, explainerFromEnv } from "./ai/explain";
-import { CACHE, RATE_LIMIT } from "./config";
+import { CACHE, RATE_LIMIT, SCENARIO_RATE_LIMIT } from "./config";
 import type { AnalyzeResponse, Explanation } from "./types";
 import { TtlCache } from "./util/cache";
 import { RateLimiter } from "./util/rate-limit";
@@ -15,7 +16,13 @@ export type CachedAnalysis = Omit<AnalyzeResponse, "requestId" | "cache">;
 let analysisCache = new TtlCache<CachedAnalysis>(CACHE.maxEntries, CACHE.ttlMs);
 let explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs);
 let rateLimiter = new RateLimiter(RATE_LIMIT);
+let scenarioRateLimiter = new RateLimiter(SCENARIO_RATE_LIMIT);
 let explainer: Explainer | undefined;
+
+/** Separate bucket for demo transaction builds (POST /api/scenarios). */
+export function getScenarioRateLimiter(): RateLimiter {
+  return scenarioRateLimiter;
+}
 
 export function getAnalysisCache(): TtlCache<CachedAnalysis> {
   return analysisCache;
@@ -42,7 +49,7 @@ export function analysisKey(base64: string, userAddress?: string): string {
  */
 export function isCacheable(result: CachedAnalysis): boolean {
   const code = result.explanation.notice?.code;
-  return result.simulation.ran && code !== "AI_UNAVAILABLE" && code !== "AI_TIMEOUT";
+  return result.simulation.ran && code !== "AI_UNAVAILABLE" && code !== "AI_TIMEOUT" && code !== "AI_BUDGET";
 }
 
 /** Tests only: start from empty state. */
@@ -50,5 +57,6 @@ export function resetServerState(): void {
   analysisCache = new TtlCache<CachedAnalysis>(CACHE.maxEntries, CACHE.ttlMs);
   explanationCache = new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs);
   rateLimiter = new RateLimiter(RATE_LIMIT);
+  scenarioRateLimiter = new RateLimiter(SCENARIO_RATE_LIMIT);
   explainer = undefined;
 }

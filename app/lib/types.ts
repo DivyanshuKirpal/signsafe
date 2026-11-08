@@ -56,7 +56,6 @@ export type DecodeWarningCode =
   | "LOOKUP_TABLE_UNRESOLVED"
   | "INSTRUCTION_PARSE_FAILED"
   | "V1_CONFIG_UNREADABLE"
-  | "OVERSIZED_FOR_VERSION"
   | "WATCH_LIST_TRUNCATED";
 
 /**
@@ -108,6 +107,7 @@ export type DecodeErrorCode =
   | "INVALID_BASE64"
   | "LOOKS_LIKE_SIGNATURE"
   | "TOO_LARGE"
+  | "TOO_MANY_INSTRUCTIONS"
   | "NOT_A_TRANSACTION"
   | "UNSUPPORTED_VERSION";
 
@@ -291,6 +291,8 @@ export type ExplanationNoticeCode =
   | "AI_UNAVAILABLE"
   | "AI_TIMEOUT"
   | "AI_BAD_REQUEST"
+  | "AI_BUDGET"
+  | "AI_TOO_LARGE"
   | "AI_REJECTED";
 
 /**

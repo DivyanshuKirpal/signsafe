@@ -24,6 +24,8 @@ export interface ExplanationFacts {
   verdict: { level: VerdictLevel; label: string; reason: string; checkComplete: boolean };
   findings: { severity: Severity; title: string; detail: string; basedOn: string[] }[];
   instructions: { step: string; program: string; description: string }[];
+  /** How many instructions were left out of `instructions` (size limit). */
+  instructionsNotListed?: number;
   accountChanges: { account: string; change: string; before: string; after: string; difference?: string; note?: string }[];
   simulation: { status: SimulationStatus; message?: string; networkFee?: string };
   couldNotCheck: string[];
@@ -85,6 +87,11 @@ function cap(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
+/** Keeps the first `max` items and says how many were left out, so the prompt stays small. */
+function capList(items: string[], max: number, more: (n: number) => string): string[] {
+  return items.length <= max ? items : [...items.slice(0, max), more(items.length - max)];
+}
+
 function programKeyOf(ix: DecodedIx) {
   return lookupProgram(ix.programId)?.key;
 }
@@ -144,6 +151,7 @@ export function buildExplanationContext(analysis: AnalysisForExplanation, userAd
   const { decoded, simulation, verdict } = analysis;
   const all = [...decoded.instructions, ...simulation.innerInstructions];
   const inner = simulation.innerInstructions.slice(0, 10);
+  const listed = [...decoded.instructions, ...inner];
 
   const status: SimulationStatus = !simulation.ran ? "not run" : simulation.ok ? "succeeded" : "failed";
   const simulationFacts: ExplanationFacts["simulation"] = { status };
@@ -162,9 +170,13 @@ export function buildExplanationContext(analysis: AnalysisForExplanation, userAd
       severity: f.severity,
       title: f.title,
       detail: f.detail,
-      basedOn: f.sources.map((s) => sourceText(s, all)),
+      basedOn: capList(
+        f.sources.map((s) => sourceText(s, all)),
+        AI.maxBasedOnLines,
+        (n) => `and ${n} more of the same kind`,
+      ),
     })),
-    instructions: [...decoded.instructions, ...inner].map((ix) => ({
+    instructions: listed.slice(0, AI.maxFactInstructions).map((ix) => ({
       step: stepLabel(ix),
       program: ix.programName,
       description: describe(ix),
@@ -177,13 +189,14 @@ export function buildExplanationContext(analysis: AnalysisForExplanation, userAd
       return row;
     }),
     simulation: simulationFacts,
-    couldNotCheck: couldNotCheckItems(decoded, simulation),
+    couldNotCheck: capList(couldNotCheckItems(decoded, simulation), AI.maxCouldNotCheck, (n) => `${n} more items are not listed here.`),
     untrusted: {
       note: UNTRUSTED_NOTE,
       memos,
       programLogs: simulation.logs.slice(0, AI.maxUntrustedLogLines).map((l) => cap(l, AI.maxUntrustedLogChars)),
     },
   };
+  if (listed.length > AI.maxFactInstructions) facts.instructionsNotListed = listed.length - AI.maxFactInstructions;
   if (userAddress && decoded.accountKeys.some((k) => k.address === userAddress)) facts.yourAddress = shortAddress(userAddress);
 
   const feePayer = decoded.feePayer;

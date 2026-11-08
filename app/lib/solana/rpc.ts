@@ -8,15 +8,16 @@
  * - Every request has a 10 s timeout. A network error, timeout, HTTP 429/5xx
  *   or rate-limit reply is retried once after a short wait, on the fallback
  *   endpoint if there is one.
- * - ensureDevnet() checks the genesis hash once per client, so a mainnet URL
- *   pasted by mistake can never be used.
+ * - Each endpoint is checked on its own before anything is sent to it: its
+ *   genesis hash must be devnet's (devnetOnly). An endpoint that is not devnet
+ *   is never used, so a mainnet URL set by mistake (primary or fallback) can
+ *   never receive a request; if no endpoint passes, the request fails.
  */
 import {
   type AddressesByLookupTableAddress,
   address,
   createDefaultRpcTransport,
   createSolanaRpcFromTransport,
-  fetchAddressesForLookupTables,
   isSolanaError,
   type Rpc,
   type RpcTransport,
@@ -69,6 +70,53 @@ export interface Endpoint {
 }
 
 /**
+ * An endpoint did not pass its devnet check: either it is another network
+ * (notDevnet, remembered) or the check could not be completed (tried again on
+ * the next request). The failover moves on to the next endpoint either way.
+ */
+export class EndpointCheckError extends Error {
+  constructor(
+    readonly label: EndpointLabel,
+    readonly notDevnet: boolean,
+  ) {
+    super(notDevnet ? `the ${label} RPC endpoint is not Solana devnet` : `the ${label} RPC endpoint could not be checked`);
+    this.name = "EndpointCheckError";
+  }
+}
+
+/**
+ * Wraps an endpoint so that no request reaches it before its own genesis hash
+ * has been confirmed as devnet's. The check runs once per endpoint; a failed
+ * check (network error, rate limit) is retried on the next request.
+ */
+export function devnetOnly(endpoint: Endpoint): Endpoint {
+  let check: Promise<boolean> | null = null;
+  const isDevnet = (signal?: AbortSignal): Promise<boolean> => {
+    if (!check) {
+      const pending = endpoint.transport<unknown>({
+        payload: { jsonrpc: "2.0", id: 0, method: "getGenesisHash", params: [] },
+        signal,
+      }).then((reply) => {
+        if (typeof reply === "object" && reply !== null && "result" in reply) {
+          return (reply as { result: unknown }).result === DEVNET_GENESIS_HASH;
+        }
+        throw new EndpointCheckError(endpoint.label, false); // for example a rate-limit reply
+      });
+      pending.catch(() => {
+        if (check === pending) check = null;
+      });
+      check = pending;
+    }
+    return check;
+  };
+  const transport = async <TResponse>(config: Parameters<RpcTransport>[0]): Promise<TResponse> => {
+    if (!(await isDevnet(config.signal))) throw new EndpointCheckError(endpoint.label, true);
+    return endpoint.transport<TResponse>(config);
+  };
+  return { label: endpoint.label, transport: transport as RpcTransport };
+}
+
+/**
  * A transport that tries each attempt in `attempts` in order (for example
  * [primary, fallback] or [primary, primary]) until one succeeds.
  */
@@ -93,7 +141,10 @@ export function createFailoverTransport(
         return response;
       } catch (error) {
         lastError = error;
-        if (config.signal?.aborted || !isTransient(error)) throw error;
+        if (config.signal?.aborted) throw error;
+        // An endpoint that failed its devnet check is skipped, never used.
+        if (error instanceof EndpointCheckError) continue;
+        if (!isTransient(error)) throw error;
       }
     }
     throw lastError;
@@ -108,10 +159,11 @@ export function createSignSafeRpc(
   wrap: (transport: RpcTransport) => RpcTransport = (t) => t,
 ): SignSafeRpc {
   let last: EndpointLabel | undefined;
-  const primary: Endpoint = { label: "primary", transport: createDefaultRpcTransport({ url: primaryUrl }) };
-  const second: Endpoint =
+  // Every endpoint is checked against devnet's genesis hash before its first use.
+  const primary = devnetOnly({ label: "primary", transport: createDefaultRpcTransport({ url: primaryUrl }) });
+  const second =
     fallbackUrl && fallbackUrl !== primaryUrl
-      ? { label: "fallback", transport: createDefaultRpcTransport({ url: fallbackUrl }) }
+      ? devnetOnly({ label: "fallback", transport: createDefaultRpcTransport({ url: fallbackUrl }) })
       : primary;
   const transport = createFailoverTransport([primary, second], (label) => {
     last = label;
@@ -130,14 +182,24 @@ export function rpcFromEnv(env: Record<string, string | undefined> = process.env
 
 const devnetChecks = new WeakMap<object, Promise<boolean>>();
 
-/** True if the endpoint is Solana devnet (checked by genesis hash, once per client). */
+/**
+ * True if the client answers with devnet's genesis hash (once per client).
+ * Clients from createSignSafeRpc also check every endpoint on its own before
+ * use (devnetOnly), so false here means no configured endpoint is devnet.
+ */
 export function ensureDevnet(rpc: Rpc<SolanaRpcApi>): Promise<boolean> {
   let check = devnetChecks.get(rpc);
   if (!check) {
     check = rpc
       .getGenesisHash()
       .send()
-      .then((hash) => hash === DEVNET_GENESIS_HASH);
+      .then(
+        (hash) => hash === DEVNET_GENESIS_HASH,
+        (error: unknown) => {
+          if (error instanceof EndpointCheckError && error.notDevnet) return false;
+          throw error;
+        },
+      );
     // Do not cache failures (for example the RPC being briefly unreachable).
     check.catch(() => devnetChecks.delete(rpc));
     devnetChecks.set(rpc, check);
@@ -145,20 +207,36 @@ export function ensureDevnet(rpc: Rpc<SolanaRpcApi>): Promise<boolean> {
   return check;
 }
 
+const ADDRESS_LOOKUP_TABLE_PROGRAM = "AddressLookupTab1e1111111111111111111111111";
+
+/** The addresses stored in a lookup-table account (jsonParsed), or undefined if it is not one. */
+function lookupTableContents(account: unknown): string[] | undefined {
+  if (typeof account !== "object" || account === null) return undefined;
+  const { owner, data } = account as { owner?: unknown; data?: unknown };
+  if (owner !== ADDRESS_LOOKUP_TABLE_PROGRAM || typeof data !== "object" || data === null) return undefined;
+  const parsed = (data as { parsed?: { type?: unknown; info?: { addresses?: unknown } } }).parsed;
+  const list = parsed?.type === "lookupTable" ? parsed.info?.addresses : undefined;
+  return Array.isArray(list) && list.every((a) => typeof a === "string") ? list : undefined;
+}
+
 /**
- * Loads lookup tables one by one, so one missing table does not hide the
- * others. Tables that cannot be loaded are simply absent from the result; the
- * decoder then reports them as unresolved.
+ * Loads lookup tables with one getMultipleAccounts call (duplicates removed;
+ * the decoder caps how many are asked for). Accounts that are missing or are
+ * not lookup tables are simply absent from the result; the decoder then
+ * reports them as unresolved.
  */
 export function lookupTableFetcher(rpc: Rpc<SolanaRpcApi>) {
   return async (addresses: string[]): Promise<AddressesByLookupTableAddress> => {
-    const results = await Promise.allSettled(
-      addresses.map((a) => fetchAddressesForLookupTables([address(a)], rpc, { commitment: "confirmed" })),
-    );
+    const unique = [...new Set(addresses)].slice(0, 100); // getMultipleAccounts takes at most 100
     const tables: AddressesByLookupTableAddress = {};
-    for (const result of results) {
-      if (result.status === "fulfilled") Object.assign(tables, result.value);
-    }
+    if (unique.length === 0) return tables;
+    const { value } = await rpc
+      .getMultipleAccounts(unique.map((a) => address(a)), { commitment: "confirmed", encoding: "jsonParsed" })
+      .send();
+    value.forEach((account, i) => {
+      const contents = lookupTableContents(account);
+      if (contents) tables[address(unique[i])] = contents.map((a) => address(a));
+    });
     return tables;
   };
 }

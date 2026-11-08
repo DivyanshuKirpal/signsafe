@@ -36,8 +36,16 @@ export const LIMITS = {
   maxRequestBodyChars: 20_000,
   /** v1 transactions can be up to 4,096 bytes; nothing valid is larger. */
   maxTransactionBytes: 4_096,
-  /** Legacy and v0 transactions must fit in 1,232 bytes to land on chain. */
+  /** Legacy and v0 transactions must fit in 1,232 bytes to land on chain; larger ones are refused before any RPC call. */
   maxLegacyTransactionBytes: 1_232,
+  /** Solana (and Kit) allow at most 64 instructions per transaction; more are refused before any RPC call. */
+  maxInstructions: 64,
+  /**
+   * Distinct lookup tables loaded per transaction (one RPC call for all of them).
+   * Real transactions use 1-4; the others are reported as not loaded, so the
+   * check is "Could not fully check" rather than an RPC call per table.
+   */
+  maxLookupTables: 8,
   /** Memo text is untrusted; keep only this many characters. */
   maxMemoChars: 300,
   /** Any other untrusted or decoded text value shown in the UI. */
@@ -75,6 +83,19 @@ export const AI = {
   maxUntrustedMemoChars: 200,
   maxUntrustedLogLines: 6,
   maxUntrustedLogChars: 120,
+  /** Size limits for the facts sent to the model; what is left out is counted ("and N more"). */
+  maxFactInstructions: 20,
+  maxBasedOnLines: 5,
+  maxCouldNotCheck: 10,
+  /** A larger prompt is not sent at all: the built-in explanation is used instead. */
+  maxPromptChars: 16_000,
+  /**
+   * Gemini requests (every HTTP attempt) one server instance may make per
+   * window. Matches the free tier's daily allowance; beyond it the built-in
+   * explanation is shown until the oldest request leaves the window.
+   */
+  budgetMaxRequests: 20,
+  budgetWindowMs: 24 * 60 * 60_000,
   /** Validation limits for an AI answer. */
   maxSummarySentences: 2,
   maxPoints: 5,
@@ -99,5 +120,12 @@ export const RATE_LIMIT = {
   maxRequests: 10,
   windowMs: 60_000,
   /** Bound on the number of IPs tracked at once. */
+  maxTrackedClients: 5_000,
+} as const;
+
+/** Demo transaction builds (POST /api/scenarios): each one spends devnet RPC requests. */
+export const SCENARIO_RATE_LIMIT = {
+  maxRequests: 20,
+  windowMs: 60_000,
   maxTrackedClients: 5_000,
 } as const;

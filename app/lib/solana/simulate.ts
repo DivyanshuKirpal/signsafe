@@ -23,6 +23,7 @@ import {
 import { LIMITS } from "../config";
 import type { DecodedIx, DecodedTx, SimulationResult, WatchedAccount } from "../types";
 import { type AccountSnapshot, toAccountState, toSnapshot } from "./accounts";
+import { withoutSignatures } from "./decode";
 import { describeInstruction } from "./describe";
 import { shortAddress } from "./format";
 import { decodeInnerInstructions } from "./inner";
@@ -161,7 +162,9 @@ export async function simulateDecoded(
   let simSlot: bigint;
   try {
     const result = await rpc
-      .simulateTransaction(base64 as Base64EncodedWireTransaction, {
+      // Signatures are never sent: they are not checked (sigVerify off), and a signed
+      // transaction should not leave the server in a form someone could submit.
+      .simulateTransaction(withoutSignatures(base64) as Base64EncodedWireTransaction, {
         encoding: "base64",
         sigVerify: false,
         replaceRecentBlockhash: true,

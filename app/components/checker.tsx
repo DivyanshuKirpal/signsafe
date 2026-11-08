@@ -198,14 +198,16 @@ export function Checker() {
           body: JSON.stringify({ id: action.scenario.id }),
           signal: controller.signal,
         });
+        if (!res.ok) {
+          const { message, retryAt } = await readError(res); // a rate limit gets the countdown too
+          if (!isCurrent()) return;
+          fail("Could not build the demo transaction", message, { replayId, ...(retryAt !== undefined ? { retryAt } : {}) });
+          return;
+        }
         const body: unknown = await res.json().catch(() => null);
         if (!isCurrent()) return;
-        if (!res.ok || typeof (body as { txBase64?: unknown } | null)?.txBase64 !== "string") {
-          fail(
-            "Could not build the demo transaction",
-            isApiError(body) ? body.error.message : "The demo transaction could not be built.",
-            { replayId },
-          );
+        if (typeof (body as { txBase64?: unknown } | null)?.txBase64 !== "string") {
+          fail("Could not build the demo transaction", "The demo transaction could not be built.", { replayId });
           return;
         }
         tx = (body as { txBase64: string }).txBase64;

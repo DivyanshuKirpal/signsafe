@@ -5,6 +5,7 @@
  *   GET  /api/scenarios?reveal=<id>    -> { id, code, pitch, description, expected, expectedLabels }
  *                                         (the UI calls this only after the check has run)
  *   POST /api/scenarios { id, owner? } -> { txBase64, owner }     (unsigned; owner defaults to the demo victim)
+ *                                         JSON only; 20 builds per minute per IP (each spends RPC requests)
  */
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
@@ -14,7 +15,9 @@ import { getScenario, SCENARIO_IDS, SCENARIOS } from "@/app/lib/scenarios/index"
 import { revealScenario } from "@/app/lib/scenarios/reveal";
 import { ensureDevnet, redactSecrets } from "@/app/lib/solana/rpc";
 import { getServerRpc } from "@/app/lib/solana/server-rpc";
-import { jsonError } from "@/app/lib/util/errors";
+import { getScenarioRateLimiter } from "@/app/lib/server-state";
+import { jsonError, rateLimited, requireJson } from "@/app/lib/util/errors";
+import { clientKey } from "@/app/lib/util/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -41,6 +44,8 @@ const BuildSchema = z.object({
 });
 
 export async function POST(request: Request): Promise<Response> {
+  const notJson = requireJson(request);
+  if (notJson) return notJson;
   const text = await request.text();
   if (text.length > 2_000) return jsonError(413, "TOO_LARGE", "The request is too large.");
   let body: unknown;
@@ -51,6 +56,10 @@ export async function POST(request: Request): Promise<Response> {
   }
   const parsed = BuildSchema.safeParse(body);
   if (!parsed.success) return jsonError(400, "BAD_REQUEST", "Send { \"id\": \"<scenario id>\" } with an optional valid owner address.");
+
+  // Each build spends devnet RPC requests, so builds have their own per-IP limit.
+  const limit = getScenarioRateLimiter().check(clientKey(request));
+  if (!limit.allowed) return rateLimited(limit.retryAfterMs, "demo transactions");
 
   const config = loadDemoConfig();
   if (!config) return jsonError(503, "DEMO_NOT_SET_UP", "The demo accounts are not set up yet. Run npm run setup:demo first.");

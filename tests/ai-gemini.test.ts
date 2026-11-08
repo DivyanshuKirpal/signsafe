@@ -5,9 +5,12 @@
  */
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { analyzeTransaction } from "../app/lib/analyze";
-import { createGeminiExplainer, explainerFromEnv } from "../app/lib/ai/explain";
+import { createAiBudget, createGeminiExplainer, explainerFromEnv } from "../app/lib/ai/explain";
 import { buildExplanationContext, type ExplanationContext } from "../app/lib/ai/facts";
 import { resetThinkingMemory } from "../app/lib/ai/gemini";
+import { AI } from "../app/lib/config";
+import { isCacheable } from "../app/lib/server-state";
+import { RateLimiter } from "../app/lib/util/rate-limit";
 import { loadFixture, replayFixture } from "./helpers/fake-rpc";
 
 type Reply = { status: number; json: unknown } | "timeout" | "network";
@@ -313,5 +316,56 @@ describe("explanation cache (keyed by the exact facts)", () => {
     expect((await e.explain(ctx["s3-hidden-approval"], { deadline: far() })).source).toBe("template");
     expect((await e.explain(ctx["s3-hidden-approval"], { deadline: far() })).source).toBe("ai");
     expect(calls).toHaveLength(2);
+  });
+});
+
+describe("per-instance AI budget and prompt size (docs/SECURITY_REVIEW.md M1, M2)", () => {
+  const byFacts = (call: Call): Reply => (call.body.contents[0].parts[0].text.includes("Send 0.01 SOL") ? ok(S3_ANSWER) : ok(S2_ANSWER));
+
+  test("every HTTP attempt counts; when the budget is used up the built-in text is shown without a request", async () => {
+    let t = 0;
+    const { impl, calls } = fakeFetch((call) => (calls.length === 1 ? err(503, "overloaded") : byFacts(call)));
+    const e = createGeminiExplainer({
+      apiKey: "test-key-not-real",
+      model: "gemini-3.5-flash",
+      fetchImpl: impl,
+      sleep: async () => {},
+      random: () => 0.5,
+      budget: new RateLimiter({ maxRequests: 2, windowMs: 60_000, maxTrackedClients: 1 }, () => t),
+    });
+    // 503, then accepted: two attempts, the whole budget.
+    expect((await e.explain(ctx["s3-hidden-approval"], { deadline: far() })).source).toBe("ai");
+    expect(calls).toHaveLength(2);
+    const over = await e.explain(ctx["s2-unlimited-approval"], { deadline: far() });
+    expect(over).toMatchObject({ source: "template", notice: { code: "AI_BUDGET" } });
+    expect(calls).toHaveLength(2);
+    // Cached answers cost nothing, even with the budget used up.
+    expect((await e.explain(ctx["s3-hidden-approval"], { deadline: far() })).reused).toBe(true);
+    // Once the oldest attempts leave the window, the AI is asked again.
+    t = 60_001;
+    expect((await e.explain(ctx["s2-unlimited-approval"], { deadline: far() })).source).toBe("ai");
+    expect(calls).toHaveLength(3);
+  });
+
+  test("the default budget is the configured per-instance allowance", () => {
+    const budget = createAiBudget(() => 0);
+    for (let i = 0; i < AI.budgetMaxRequests; i++) expect(budget.check("gemini").allowed).toBe(true);
+    expect(budget.check("gemini").allowed).toBe(false);
+  });
+
+  test("a prompt over the size limit is never sent", async () => {
+    const { e, calls } = explainer([ok(S3_ANSWER)]);
+    const base = ctx["s3-hidden-approval"];
+    const huge: ExplanationContext = {
+      ...base,
+      facts: { ...base.facts, findings: base.facts.findings.map((f, i) => (i === 0 ? { ...f, detail: "x".repeat(AI.maxPromptChars) } : f)) },
+    };
+    expect(await e.explain(huge, { deadline: far() })).toMatchObject({ source: "template", notice: { code: "AI_TOO_LARGE" } });
+    expect(calls).toHaveLength(0);
+  });
+
+  test("results with AI_BUDGET are not cached, so a later check can still get AI text", () => {
+    const result = { simulation: { ran: true }, explanation: { notice: { code: "AI_BUDGET" } } } as unknown as Parameters<typeof isCacheable>[0];
+    expect(isCacheable(result)).toBe(false);
   });
 });

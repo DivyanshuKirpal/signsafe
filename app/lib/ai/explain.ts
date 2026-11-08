@@ -10,9 +10,10 @@
  * Only accepted AI answers are cached; "Check again" (fresh) skips the read.
  */
 import { createHash } from "node:crypto";
-import { CACHE } from "../config";
+import { AI, CACHE } from "../config";
 import type { Explanation, ExplanationNoticeCode } from "../types";
 import { TtlCache } from "../util/cache";
+import { RateLimiter } from "../util/rate-limit";
 import type { ExplanationContext } from "./facts";
 import { type GeminiFailure, type GeminiOptions, generateExplanationText } from "./gemini";
 import { buildUserPrompt, SYSTEM_INSTRUCTION } from "./prompt";
@@ -37,6 +38,8 @@ const NOTICES: Record<Exclude<ExplanationNoticeCode, "AI_REJECTED">, string> = {
   AI_UNAVAILABLE: "The AI service was busy or unavailable.",
   AI_TIMEOUT: "The AI service did not answer in time.",
   AI_BAD_REQUEST: "The AI service could not process the request.",
+  AI_BUDGET: "This server has used its AI explanations for now.",
+  AI_TOO_LARGE: "This transaction is too large for an AI explanation.",
 };
 
 const REJECTED: Record<RejectCode | "BLOCKED", string> = {
@@ -70,6 +73,7 @@ const FAILURE_NOTICE: Record<Exclude<GeminiFailure, "blocked">, Exclude<Explanat
   timeout: "AI_TIMEOUT",
   deadline: "AI_TIMEOUT",
   bad_request: "AI_BAD_REQUEST",
+  budget: "AI_BUDGET",
 };
 
 /** The built-in explanation, with the reason it is shown. */
@@ -86,10 +90,19 @@ export function factsFingerprint(context: ExplanationContext, models: string): s
   return createHash("sha256").update(JSON.stringify(context.facts)).update("|").update(models).digest("hex");
 }
 
-export function createGeminiExplainer(options: GeminiOptions & { cache?: TtlCache<Explanation> }): Explainer {
+/** The per-instance AI budget: Gemini HTTP attempts per window (in memory, like the other limits). */
+export function createAiBudget(now?: () => number): RateLimiter {
+  return new RateLimiter({ maxRequests: AI.budgetMaxRequests, windowMs: AI.budgetWindowMs, maxTrackedClients: 1 }, now);
+}
+
+export function createGeminiExplainer(
+  options: GeminiOptions & { cache?: TtlCache<Explanation>; budget?: RateLimiter },
+): Explainer {
   const cache = options.cache ?? new TtlCache<Explanation>(CACHE.maxEntries, CACHE.explanationTtlMs, options.now);
+  const budget = options.budget ?? createAiBudget(options.now);
   const log = options.log ?? (() => {});
   const models = `${options.model}|${options.fallbackModel ?? ""}`;
+  const gemini: GeminiOptions = { ...options, allowAttempt: () => budget.check("gemini").allowed };
 
   return {
     async explain(context, { deadline, fresh }) {
@@ -99,7 +112,13 @@ export function createGeminiExplainer(options: GeminiOptions & { cache?: TtlCach
         if (hit) return { ...hit.value, reused: true };
       }
 
-      const result = await generateExplanationText(options, { system: SYSTEM_INSTRUCTION, user: buildUserPrompt(context.facts) }, deadline);
+      const user = buildUserPrompt(context.facts);
+      if (user.length > AI.maxPromptChars) {
+        log(`[ai] not asked: the facts are ${user.length} characters (limit ${AI.maxPromptChars})`);
+        return builtIn(context, noticeFor("AI_TOO_LARGE"));
+      }
+
+      const result = await generateExplanationText(gemini, { system: SYSTEM_INSTRUCTION, user }, deadline);
       if (!result.ok) {
         return builtIn(context, result.failure === "blocked" ? rejectedNotice("BLOCKED") : noticeFor(FAILURE_NOTICE[result.failure]));
       }

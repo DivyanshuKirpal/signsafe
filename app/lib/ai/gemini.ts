@@ -33,9 +33,11 @@ export interface GeminiOptions {
   random?: () => number;
   log?: (message: string) => void;
   baseUrl?: string;
+  /** Asked before every HTTP attempt; false stops with failure "budget" (the per-instance AI budget). */
+  allowAttempt?: () => boolean;
 }
 
-export type GeminiFailure = "auth" | "unavailable" | "timeout" | "deadline" | "bad_request" | "not_found" | "blocked";
+export type GeminiFailure = "auth" | "unavailable" | "timeout" | "deadline" | "bad_request" | "not_found" | "blocked" | "budget";
 
 export type GeminiResult =
   | { ok: true; text: string; modelVersion?: string; model: string; attempts: number }
@@ -140,6 +142,11 @@ export async function generateExplanationText(
   while (attempts < 8) {
     const remaining = deadline - now();
     if (remaining < AI.minAttemptMs) return { ok: false, failure: attempts === 0 ? "deadline" : lastTransient === "timeout" ? "timeout" : "deadline", attempts };
+    // Every HTTP attempt counts against the server's AI budget (retries included).
+    if (options.allowAttempt && !options.allowAttempt()) {
+      log("[ai] request budget used up for now");
+      return { ok: false, failure: "budget", attempts };
+    }
     attempts++;
     const thinking = stripped ? null : thinkingFor(model);
     const body = buildRequestBody(prompt.system, prompt.user, !stripped, thinking);

@@ -14,13 +14,16 @@
  * (decodeTransaction accepts a fetcher; tests pass a mock).
  */
 import {
+  type Address,
   type AddressesByLookupTableAddress,
   type CompiledTransactionMessage,
   type CompiledTransactionMessageWithLifetime,
   decompileTransactionMessage,
+  getBase64Decoder,
   getBase64Encoder,
   getCompiledTransactionMessageDecoder,
   getTransactionDecoder,
+  getTransactionEncoder,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import { LIMITS } from "../config";
@@ -190,13 +193,43 @@ export function parseWireTransaction(input: string): WireTransaction {
     throw new DecodeError("NOT_A_TRANSACTION", NOT_A_TRANSACTION);
   }
 
+  // Refused here, before any RPC or AI work: the network would reject these anyway,
+  // and they would only make a check expensive (many lookups, a huge AI prompt).
+  const instructionCount = compiledInstructions(message).length;
+  if (instructionCount > LIMITS.maxInstructions) {
+    throw new DecodeError(
+      "TOO_MANY_INSTRUCTIONS",
+      `This transaction has ${instructionCount} instructions. Solana transactions can have at most ${LIMITS.maxInstructions}, so the network would reject it.`,
+    );
+  }
+  if (message.version !== 1 && bytes.length > LIMITS.maxLegacyTransactionBytes) {
+    throw new DecodeError(
+      "TOO_LARGE",
+      `This ${message.version === "legacy" ? "legacy" : "v0"} transaction is ${bytes.length} bytes. Legacy and v0 transactions can be at most ${LIMITS.maxLegacyTransactionBytes.toLocaleString("en-US")} bytes, so the network would reject it.`,
+    );
+  }
+
   assertWellFormed(message, message.staticAccounts.length + countLookupAccounts(message));
   return { sizeBytes: bytes.length, signatures, message };
 }
 
-export function getLookupTableAddresses(wire: WireTransaction): string[] {
-  return lookupsOf(wire.message).map((l) => l.lookupTableAddress);
+/**
+ * The same transaction with every signature replaced by 64 zero bytes. The
+ * simulation does not check signatures (sigVerify off), so a signed
+ * transaction never has to leave the server with its signatures.
+ */
+export function withoutSignatures(base64: string): string {
+  const tx = getTransactionDecoder().decode(getBase64Encoder().encode(base64));
+  const signatures = Object.fromEntries(Object.keys(tx.signatures).map((signer) => [signer, null]));
+  const unsigned = { ...tx, signatures } as typeof tx;
+  return getBase64Decoder().decode(getTransactionEncoder().encode(unsigned));
 }
+
+/** Distinct lookup tables in message order; only the first LIMITS.maxLookupTables are loaded. */
+function distinctLookupTables(message: CompiledMessage): Address[] {
+  return [...new Set(lookupsOf(message).map((l) => l.lookupTableAddress))];
+}
+
 
 /**
  * Builds the full account list in message order:
@@ -243,14 +276,17 @@ export function resolveAccountKeys(
       }
     }
   }
-  for (const lookup of lookups) {
-    if (!tables[lookup.lookupTableAddress]) {
-      warnings.push({
-        code: "LOOKUP_TABLE_UNRESOLVED",
-        message: `Lookup table ${shortAddress(lookup.lookupTableAddress)} could not be loaded, so some accounts are unknown.`,
-      });
-    }
-  }
+  const distinct = distinctLookupTables(message);
+  distinct.forEach((table, i) => {
+    if (tables[table]) return;
+    warnings.push({
+      code: "LOOKUP_TABLE_UNRESOLVED",
+      message:
+        i < LIMITS.maxLookupTables
+          ? `Lookup table ${shortAddress(table)} could not be loaded, so some accounts are unknown.`
+          : `Lookup table ${shortAddress(table)} was not loaded (SignSafe loads at most ${LIMITS.maxLookupTables} lookup tables per transaction), so some accounts are unknown.`,
+    });
+  });
   return { keys, warnings };
 }
 
@@ -323,13 +359,6 @@ export function decodeWireTransaction(
     }
   }
 
-  if (message.version !== 1 && wire.sizeBytes > LIMITS.maxLegacyTransactionBytes) {
-    warnings.push({
-      code: "OVERSIZED_FOR_VERSION",
-      message: `This ${message.version === "legacy" ? "legacy" : "v0"} transaction is ${wire.sizeBytes} bytes; the limit is ${LIMITS.maxLegacyTransactionBytes}, so the network would reject it.`,
-    });
-  }
-
   const first = instructions[0];
   const usesDurableNonce =
     first !== undefined &&
@@ -367,7 +396,8 @@ export interface DecodeOptions {
 /** Full decode of pasted base64. Throws DecodeError for unusable input. */
 export async function decodeTransaction(input: string, options: DecodeOptions = {}): Promise<DecodedTx> {
   const wire = parseWireTransaction(input);
-  const tableAddresses = getLookupTableAddresses(wire);
+  // At most LIMITS.maxLookupTables distinct tables are loaded; the rest are reported as not loaded.
+  const tableAddresses = distinctLookupTables(wire.message).slice(0, LIMITS.maxLookupTables);
   let tables: AddressesByLookupTableAddress = {};
   if (tableAddresses.length > 0 && options.fetchLookupTables) {
     try {

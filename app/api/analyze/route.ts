@@ -24,7 +24,7 @@ import { redactSecrets } from "@/app/lib/solana/rpc";
 import { getServerRpc } from "@/app/lib/solana/server-rpc";
 import type { AnalyzeResponse, AnalyzeStreamEvent } from "@/app/lib/types";
 import { toJsonSafe } from "@/app/lib/util/bigint-json";
-import { inputTag, jsonError } from "@/app/lib/util/errors";
+import { inputTag, jsonError, rateLimited, requireJson } from "@/app/lib/util/errors";
 import { clientKey } from "@/app/lib/util/rate-limit";
 
 // Secrets and the RPC are server-only; this route always runs on Node.js.
@@ -105,6 +105,8 @@ export async function POST(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
   const deadline = Date.now() + AI.routeDeadlineMs;
 
+  const notJson = requireJson(request);
+  if (notJson) return notJson;
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
   if (declaredLength > LIMITS.maxRequestBodyChars) {
     return jsonError(413, "TOO_LARGE", "The request is too large.");
@@ -145,12 +147,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const limit = getRateLimiter().check(clientKey(request));
-    if (!limit.allowed) {
-      const seconds = Math.ceil(limit.retryAfterMs / 1000);
-      const res = jsonError(429, "RATE_LIMITED", `Too many checks in a short time. Please wait about ${seconds} seconds and try again.`);
-      res.headers.set("Retry-After", String(seconds));
-      return res;
-    }
+    if (!limit.allowed) return rateLimited(limit.retryAfterMs, "checks");
 
     const log = (message: string) => console.warn(`[analyze ${requestId}] input ${inputTag(base64)}: ${message}`);
     const run = async (onProgress?: (event: AnalyzeProgress) => void): Promise<AnalyzeResponse> => {

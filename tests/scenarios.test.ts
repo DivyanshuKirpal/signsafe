@@ -97,7 +97,8 @@ describe("/api/scenarios", () => {
   });
 
   test("build: bad requests are rejected; without RPC (tests) nothing touches the network", async () => {
-    const post = (body: unknown) => POST(new Request("http://localhost/api/scenarios", { method: "POST", body: JSON.stringify(body) }));
+    const post = (body: unknown) =>
+      POST(new Request("http://localhost/api/scenarios", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
     expect((await post({ id: "nope" })).status).toBe(400);
     expect((await post({ id: "s1-normal-payment", owner: "not-an-address" })).status).toBe(400);
     const res = await post({ id: "s1-normal-payment" });

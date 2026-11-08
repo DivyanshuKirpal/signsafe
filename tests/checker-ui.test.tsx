@@ -208,6 +208,20 @@ describe("errors", () => {
     expect(retry.disabled).toBe(true);
   });
 
+  test("a rate-limited demo build also shows the server's message and the countdown", async () => {
+    mockFetch(() => json(RESULT), {
+      "POST /api/scenarios": () =>
+        json({ error: { code: "RATE_LIMITED", message: "Too many demo transactions in a short time. Please wait about 30 seconds and try again." } }, 429, {
+          "retry-after": "30",
+        }),
+    });
+    render(<Checker />);
+    fireEvent.click(await screen.findByRole("button", { name: /S3 Send 0.01 SOL/ }));
+    await screen.findByText(/Too many demo transactions/);
+    expect((screen.getByRole("button", { name: /^Try again in \d+ s$/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(analyzeBodies()).toEqual([]);
+  });
+
   test("Try again repeats exactly the same request after a server error", async () => {
     let calls = 0;
     mockFetch(() =>
